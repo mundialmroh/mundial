@@ -728,6 +728,7 @@ async function borrarApuesta(id) {
 
 // RENDER RESULTADOS
 function renderResultados() {
+  const isAdmin = currentUser && currentUser.rol === 'admin';
   const pIds  = [...new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId))];
   const lista = PARTIDOS.filter(p=>pIds.includes(p.id)||resultados[p.id]);
   const container = document.getElementById("lista-resultados");
@@ -741,72 +742,79 @@ function renderResultados() {
       {id:'subcampeon',   label:'Subcampeón',   icon:'🥈', field:'subcampeon'},
       {id:'tercer_puesto',label:'Tercer puesto', icon:'🥉', field:'tercerPuesto'},
     ];
-    especialesHtml = `<div class="card" style="margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:12px;">🏆 Resultados finales del mundial</div>
-      ${especiales.map(e => {
-        const r = resultados[e.id];
-        const n = apuestas.filter(a=>a.tipo===e.id).length;
-        if (!n) return '';
-        if (r) return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:20px;">${e.icon}</span>
-          <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${e.label}</div>
-          <div style="font-size:13px;color:var(--verde);font-weight:600;">${r.equipo}</div>
-          <div style="font-size:11px;color:var(--muted);">${n} apuesta(s)</div></div>
-          ${currentUser.rol==='admin' ? '<button class="btn btn-outline btn-sm" onclick="borrarResultadoEspecial(\''+e.id+'\')" >✕</button>' : ''}
-        </div>`;
-        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-          <span style="font-size:20px;">${e.icon}</span>
-          <div style="flex:1;font-weight:600;">${e.label}</div>
-          ${currentUser.rol==='admin' ? '<input type="text" id="res-'+e.id+'" placeholder="Equipo ganador" list="lista-equipos" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/><button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial(\'' + e.id + '\')" >Guardar</button>' : '<span style="color:var(--muted);font-size:13px;">⏳ Pendiente</span>'}
-        </div>`;
-      }).join('')}
-    </div>`;
+    const filaEspecial = especiales.map(e => {
+      const r = resultados[e.id];
+      const n = apuestas.filter(a=>a.tipo===e.id).length;
+      if (!n) return '';
+      if (r) {
+        const btnBorrar = isAdmin ? '<button class="btn btn-outline btn-sm" onclick="borrarResultadoEspecial(&quot;'+e.id+'&quot;)">✕</button>' : '';
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+          + '<span style="font-size:20px;">'+e.icon+'</span>'
+          + '<div style="flex:1;"><div style="font-weight:600;font-size:14px;">'+e.label+'</div>'
+          + '<div style="font-size:13px;color:var(--verde);font-weight:600;">'+r.equipo+'</div>'
+          + '<div style="font-size:11px;color:var(--muted);">'+n+' apuesta(s)</div></div>'
+          + btnBorrar + '</div>';
+      }
+      if (!isAdmin) {
+        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+          + '<span style="font-size:20px;">'+e.icon+'</span>'
+          + '<div style="flex:1;font-weight:600;">'+e.label+'</div>'
+          + '<span style="color:var(--muted);font-size:13px;">⏳ Pendiente</span></div>';
+      }
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
+        + '<span style="font-size:20px;">'+e.icon+'</span>'
+        + '<div style="flex:1;font-weight:600;">'+e.label+'</div>'
+        + '<input type="text" id="res-'+e.id+'" placeholder="Equipo ganador" list="lista-equipos" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>'
+        + '<button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial(&quot;'+e.id+'&quot;)">Guardar</button></div>';
+    }).join('');
+    especialesHtml = '<div class="card" style="margin-bottom:14px;">'
+      + '<div class="card-title" style="margin-bottom:12px;">🏆 Resultados finales del mundial</div>'
+      + filaEspecial + '</div>';
   }
 
   if (!lista.length && !especialesHtml) { container.innerHTML='<div class="empty"><div class="empty-ico">⏳</div>Registra apuestas para ver partidos aquí</div>'; return; }
   container.innerHTML = especialesHtml;
   if (!lista.length) return;
   const fechas = [...new Set(lista.map(p=>p.fecha))];
-  container.innerHTML = fechas.map(f => {
+  container.innerHTML += fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
-    return `<div class="fecha-bloque">
-      <div class="fecha-header"><div class="fecha-badge">📅 ${f}</div><div class="fecha-line"></div></div>
-      ${ps.map(p => {
-        const r = resultados[p.id];
-        const n = apuestas.filter(a=>a.partidoId===p.id).length;
-        const cfg = configPartidos[p.id] || {};
-        if(r) return `<div class="res-card">
-          <div class="res-match">${p.grupo} · ${p.local} vs ${p.visitante}</div>
-          <div class="res-form"><span style="font-weight:600;">${p.local}</span><div class="res-done">${r.local} – ${r.visitante}</div><span style="font-weight:600;">${p.visitante}</span>
-          ${currentUser.rol==='admin' ? `<button class="btn btn-outline btn-sm" onclick="borrarResultado('${p.id}')" style="margin-left:auto;">✕</button>` : ''}</div>
-          ${cfg.tarjetas ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">🟨 Tarjetas: ${r.tarjetasLocal||0}–${r.tarjetasVisitante||0}</div>` : ''}
-          ${cfg.esquinas ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">🔄 Esquinas: ${r.esquinasLocal||0}–${r.esquinasVisitante||0}</div>` : ''}
-          <div style="font-size:12px;color:var(--muted);margin-top:6px;">${n} apuesta(s)</div></div>`;
-        return `<div class="res-card">
-          <div class="res-match">${p.grupo} · ${p.local} vs ${p.visitante}</div>
-          ${currentUser.rol==='admin' ? `<div class="res-form">
-            <span style="font-weight:600;font-size:13px;">${p.local}</span>
-            <input type="number" id="r-l-${p.id}" min="0" max="20" value="0"/>
-            <span style="color:var(--muted);">vs</span>
-            <input type="number" id="r-v-${p.id}" min="0" max="20" value="0"/>
-            <span style="font-weight:600;font-size:13px;">${p.visitante}</span>
-            <button class="btn btn-primary btn-sm" onclick="guardarResultado('${p.id}')" style="margin-left:auto;">Guardar</button>
-          </div>` : '<div class="res-form" style="justify-content:center;color:var(--muted);font-size:13px;">⏳ Pendiente</div>'}
-          ${cfg.tarjetas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
-            <span style="font-size:12px;font-weight:600;color:var(--muted);">🟨 Tarjetas:</span>
-            <input type="number" id="r-tl-${p.id}" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
-            <span style="font-size:12px;color:var(--muted);">vs</span>
-            <input type="number" id="r-tv-${p.id}" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
-          </div>` : ''}
-          ${cfg.esquinas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
-            <span style="font-size:12px;font-weight:600;color:var(--muted);">🔄 Esquinas:</span>
-            <input type="number" id="r-el-${p.id}" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
-            <span style="font-size:12px;color:var(--muted);">vs</span>
-            <input type="number" id="r-ev-${p.id}" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
-          </div>` : ''}
-          <div style="font-size:12px;color:var(--muted);margin-top:6px;">${n} apuesta(s)</div></div>`;
-      }).join("")}</div>`;
-  }).join("");
+    return '<div class="fecha-bloque">'
+      + '<div class="fecha-header"><div class="fecha-badge">📅 '+f+'</div><div class="fecha-line"></div></div>'
+      + ps.map(p => {
+          const r = resultados[p.id];
+          const n = apuestas.filter(a=>a.partidoId===p.id).length;
+          const cfg = configPartidos[p.id] || {};
+          if (r) {
+            const btnBorrar = isAdmin ? '<button class="btn btn-outline btn-sm" onclick="borrarResultado(&quot;'+p.id+'&quot;)" style="margin-left:auto;">✕</button>' : '';
+            return '<div class="res-card">'
+              + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
+              + '<div class="res-form"><span style="font-weight:600;">'+p.local+'</span><div class="res-done">'+r.local+' – '+r.visitante+'</div><span style="font-weight:600;">'+p.visitante+'</span>'
+              + btnBorrar + '</div>'
+              + (cfg.tarjetas ? '<div style="font-size:12px;color:var(--muted);margin-top:4px;">🟨 Tarjetas: '+(r.tarjetasLocal||0)+'–'+(r.tarjetasVisitante||0)+'</div>' : '')
+              + (cfg.esquinas ? '<div style="font-size:12px;color:var(--muted);margin-top:2px;">🔄 Esquinas: '+(r.esquinasLocal||0)+'–'+(r.esquinasVisitante||0)+'</div>' : '')
+              + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
+          }
+          if (!isAdmin) {
+            return '<div class="res-card">'
+              + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
+              + '<div class="res-form" style="justify-content:center;color:var(--muted);font-size:13px;">⏳ Pendiente</div>'
+              + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
+          }
+          return '<div class="res-card">'
+            + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
+            + '<div class="res-form">'
+            + '<span style="font-weight:600;font-size:13px;">'+p.local+'</span>'
+            + '<input type="number" id="r-l-'+p.id+'" min="0" max="20" value="0"/>'
+            + '<span style="color:var(--muted);">vs</span>'
+            + '<input type="number" id="r-v-'+p.id+'" min="0" max="20" value="0"/>'
+            + '<span style="font-weight:600;font-size:13px;">'+p.visitante+'</span>'
+            + '<button class="btn btn-primary btn-sm" onclick="guardarResultado(&quot;'+p.id+'&quot;)" style="margin-left:auto;">Guardar</button>'
+            + '</div>'
+            + (cfg.tarjetas ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;"><span style="font-size:12px;font-weight:600;color:var(--muted);">🟨 Tarjetas:</span><input type="number" id="r-tl-'+p.id+'" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/><span style="font-size:12px;color:var(--muted);">vs</span><input type="number" id="r-tv-'+p.id+'" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/></div>' : '')
+            + (cfg.esquinas ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;"><span style="font-size:12px;font-weight:600;color:var(--muted);">🔄 Esquinas:</span><input type="number" id="r-el-'+p.id+'" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/><span style="font-size:12px;color:var(--muted);">vs</span><input type="number" id="r-ev-'+p.id+'" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/></div>' : '')
+            + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
+        }).join('') + '</div>';
+  }).join('');
 }
 
 async function guardarResultado(pid) {
