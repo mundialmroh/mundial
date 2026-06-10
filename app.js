@@ -3,8 +3,8 @@
 // CONSTANTES
 const ADMIN_EMAIL        = "mundialmroh@gmail.com";
 const API_KEY_FOOTBALL   = "8ccb25f8512b4cc51e437eae1b0edca7";
-const EMAILJS_SERVICE_ID = "service_lsd2gu4";
-const EMAILJS_TEMPLATE   = "template_kgeus5l";
+const EMAILJS_SERVICE_ID = "service_l5i5rnn";
+const EMAILJS_TEMPLATE   = "template_cyfytje";
 
 const PARTIDOS = [
   {id:"A1",grupo:"Grupo A",local:"México",visitante:"Sudáfrica",fecha:"11 Jun",sede:"Ciudad de México"},
