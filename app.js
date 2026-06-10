@@ -241,6 +241,11 @@ auth.onAuthStateChanged(async user => {
   } else {
     currentUser = null;
     showAuth();
+    // Si hay ref en URL, verificar invitacion despues de mostrar auth
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("ref")) {
+      verificarInvitacion();
+    }
   }
 });
 
@@ -302,8 +307,6 @@ function showAuth() {
   document.getElementById("main-content").style.display  = "none";
   document.getElementById("nav-admin").style.display     = "none";
   if (unsubApuestas) { unsubApuestas(); unsubApuestas = null; }
-  // Verificar invitacion al mostrar auth
-  setTimeout(verificarInvitacion, 300);
 }
 
 // SUSCRIPCIÓN TIEMPO REAL A APUESTAS
