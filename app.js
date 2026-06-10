@@ -104,6 +104,19 @@ const EQUIPOS = [...new Set(PARTIDOS.flatMap(p=>[p.local,p.visitante]))].sort();
 const GRUPOS  = [...new Set(PARTIDOS.map(p=>p.grupo))];
 const FECHAS  = [...new Set(PARTIDOS.map(p=>p.fecha))];
 
+// Helper para ordenar fechas "DD Mon" correctamente
+function sortFechas(fechas) {
+  const meses = {Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12,
+                 Ene:1,Feb:2,Mar:3,Abr:4,May:5,Jun:6,Jul:7,Ago:8,Sep:9,Oct:10,Nov:11,Dic:12};
+  return [...fechas].sort((a,b) => {
+    const [da, ma] = a.split(' ');
+    const [db, mb] = b.split(' ');
+    const numA = (meses[ma]||0)*100 + parseInt(da);
+    const numB = (meses[mb]||0)*100 + parseInt(db);
+    return numA - numB;
+  });
+}
+
 // ESTADO
 let currentUser = null;
 let apuestas    = [];
@@ -662,7 +675,7 @@ function renderPartidos() {
   const fF = document.getElementById("fil-fecha").value;
   const fG = document.getElementById("fil-grupo-p").value;
   const lista = PARTIDOS.filter(p=>(!fF||p.fecha===fF)&&(!fG||p.grupo===fG));
-  const fechas = [...new Set(lista.map(p=>p.fecha))];
+  const fechas = sortFechas([...new Set(lista.map(p=>p.fecha))]);
   document.getElementById("partidos-container").innerHTML = fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
     return `<div class="fecha-bloque">
@@ -794,7 +807,7 @@ function renderResultados() {
   if (!lista.length && !especialesHtml) { container.innerHTML='<div class="empty"><div class="empty-ico">⏳</div>Registra apuestas para ver partidos aquí</div>'; return; }
   container.innerHTML = especialesHtml;
   if (!lista.length) return;
-  const fechas = [...new Set(lista.map(p=>p.fecha))];
+  const fechas = sortFechas([...new Set(lista.map(p=>p.fecha))]);
   container.innerHTML += fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
     return '<div class="fecha-bloque">'
@@ -1027,7 +1040,7 @@ function renderConfigPartidos() {
   const lista = PARTIDOS.filter(p=>(!fF||p.fecha===fF)&&(!fG||p.grupo===fG));
   const container = document.getElementById('config-partidos-lista');
   if (!container) return;
-  const fechas = [...new Set(lista.map(p=>p.fecha))];
+  const fechas = sortFechas([...new Set(lista.map(p=>p.fecha))]);
   container.innerHTML = fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
     return `<div style="margin-bottom:16px;">
