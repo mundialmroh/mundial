@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Polla Mundialista 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// Inicializar Firebase inmediatamente después de cargar los SDKs
+const firebaseConfig = {
+  apiKey: "AIzaSyC8-nms4nUH5Ac9CpMLz6HTiqjwZHZFd6g",
+  authDomain: "polla-mundialista-2026-e0f4f.firebaseapp.com",
+  projectId: "polla-mundialista-2026-e0f4f",
+  storageBucket: "polla-mundialista-2026-e0f4f.firebasestorage.app",
+  messagingSenderId: "945090661961",
+  appId: "1:945090661961:web:e879cdb032edf8631b7998"
+};
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const auth = firebase.auth();
+const db   = firebase.firestore();
+// Init EmailJS
+emailjs.init("KQqJGqKsLLVu_mp6m");
+</script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --verde:#1a6b3c;--verde-light:#d4edd9;
+  --oro:#c8972b;--oro-light:#fdf3dc;
+  --rojo:#c0392b;--bg:#f4f1ec;
+  --text:#1a1a1a;--muted:#6b6b6b;
+  --border:#e0dbd2;--radius:10px;
+}
+body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;display:flex;z-index:1000;}
+/* Panel izquierdo — imagen */
+.auth-img-panel{
+  flex:1;
+  position:relative;
+  overflow:hidden;
+  display:none;
+}
+.auth-img-panel img{
+  width:100%;height:100%;
+  object-fit:cover;
+  object-position:center center;
+  display:block;
+}
+/* Panel derecho — formulario */
+.auth-form-panel{
+  width:100%;
+  max-width:100%;
+  background:white;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:40px 32px;
+  overflow-y:auto;
+  box-shadow:-6px 0 32px rgba(0,0,0,.12);
+  position:relative;
+  z-index:1;
+}
+.auth-form-inner{width:100%;max-width:380px;}
+.auth-box{width:100%;}
+.auth-logo{text-align:center;margin-bottom:24px;}
+.auth-logo h1{font-size:30px;color:var(--verde);}
+.auth-logo p{font-size:13px;color:var(--muted);margin-top:4px;}
+.auth-tabs{display:flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:20px;}
+.auth-tab{flex:1;padding:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;border:none;background:none;color:var(--muted);transition:all .15s;}
+.auth-tab.active{background:var(--verde);color:white;}
+/* Responsive */
+@media(min-width:768px){
+  .auth-img-panel{display:block;}
+  .auth-form-panel{width:420px;max-width:420px;flex-shrink:0;}
+}
+.msg{border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none;}
+.msg.show{display:block;}
+.msg-err{background:#fee2e2;color:var(--rojo);border:1px solid #fecaca;}
+.msg-ok{background:var(--verde-light);color:var(--verde);border:1px solid #a3d9b8;}
+.inp-wrap{position:relative;margin-bottom:14px;}
+.inp-wrap label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+.inp-wrap input{width:100%;padding:10px 12px 10px 36px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);outline:none;transition:border .15s;}
+.inp-wrap input:focus{border-color:var(--verde);background:white;}
+.inp-wrap .ico{position:absolute;left:11px;bottom:10px;font-size:15px;pointer-events:none;}
+/* HEADER */
+.header{background:var(--verde);color:white;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;}
+.header h1{font-size:28px;color:white;}
+.header-sub{font-size:11px;opacity:.75;margin-top:2px;}
+.sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+.user-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border-radius:20px;padding:6px 12px 6px 6px;cursor:pointer;}
+.user-pill:hover{background:rgba(255,255,255,.25);}
+.u-avatar{width:28px;height:28px;border-radius:50%;background:var(--oro);color:white;font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.u-name{font-size:12px;color:white;font-weight:500;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.u-rol{font-size:10px;color:rgba(255,255,255,.7);}
+/* NAV */
+nav{background:white;border-bottom:1px solid var(--border);display:flex;overflow-x:auto;}
+nav button{font-family:"Inter",sans-serif;font-size:13px;font-weight:500;padding:13px 18px;border:none;background:none;cursor:pointer;color:var(--muted);white-space:nowrap;border-bottom:3px solid transparent;transition:all .15s;}
+nav button.active{color:var(--verde);border-bottom-color:var(--verde);}
+nav button:hover:not(.active){color:var(--text);background:var(--bg);}
+/* MAIN */
+.main{max-width:900px;margin:0 auto;padding:20px 16px;}
+.panel{display:none;}.panel.active{display:block;}
+.card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:20px;margin-bottom:14px;}
+.card-title{font-family:"Bebas Neue",sans-serif;font-size:18px;color:var(--verde);margin-bottom:14px;letter-spacing:.04em;}
+/* FORM */
+.frow{display:grid;gap:12px;margin-bottom:12px;}
+.frow.c2{grid-template-columns:1fr 1fr;}
+.frow.c3{grid-template-columns:1fr 48px 1fr;align-items:end;}
+label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em;}
+input,select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);outline:none;transition:border .15s;}
+input:focus,select:focus{border-color:var(--verde);background:white;}
+.score-inp{text-align:center;font-size:20px;font-weight:600;padding:10px 4px;}
+.vs-lbl{text-align:center;font-size:12px;color:var(--muted);padding-bottom:10px;font-weight:700;}
+/* BUTTONS */
+.btn{padding:11px 20px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:"Inter",sans-serif;}
+.btn-primary{background:var(--verde);color:white;width:100%;}
+.btn-primary:hover{background:#145530;}
+.btn-primary:disabled{background:#aaa;cursor:not-allowed;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-outline{background:white;border:1px solid var(--border);color:var(--text);}
+.btn-outline:hover{border-color:var(--verde);color:var(--verde);}
+.btn-gold{background:var(--oro);color:white;}
+.btn-gold:hover{background:#a87a1e;}
+.btn-danger{background:#fee2e2;color:var(--rojo);border:1px solid #fecaca;}
+.btn-danger:hover{background:#fecaca;}
+/* PARTIDOS */
+.fecha-bloque{margin-bottom:20px;}
+.fecha-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.fecha-badge{background:var(--verde);color:white;font-family:"Bebas Neue",sans-serif;font-size:14px;padding:4px 12px;border-radius:20px;letter-spacing:.05em;white-space:nowrap;}
+.fecha-line{flex:1;height:1px;background:var(--border);}
+.partidos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;}
+.partido-card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;cursor:pointer;transition:all .15s;}
+.partido-card:hover{border-color:var(--verde);box-shadow:0 2px 8px rgba(26,107,60,.1);}
+.partido-card.con-resultado{border-left:3px solid var(--verde);}
+.p-grupo{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px;}
+.p-match{font-size:13px;font-weight:600;}
+.p-sede{font-size:11px;color:var(--muted);margin-top:3px;}
+.p-res{font-family:"Bebas Neue",sans-serif;font-size:18px;color:var(--verde);letter-spacing:.05em;margin-top:4px;}
+/* FILTROS */
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.filters select{max-width:190px;padding:8px 12px;font-size:13px;}
+.export-row{display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;}
+/* APUESTAS */
+.apuesta-card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px;}
+.a-avatar{width:36px;height:36px;border-radius:50%;background:var(--verde);color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.a-info{flex:1;min-width:0;}
+.a-nombre{font-weight:600;font-size:14px;}
+.a-detalle{font-size:12px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.a-score{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--verde);min-width:48px;text-align:center;}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;text-transform:uppercase;letter-spacing:.04em;}
+.badge-grupo{background:var(--verde-light);color:var(--verde);}
+.badge-eliminatoria{background:#e0eaff;color:#2d4db5;}
+.badge-campeon{background:var(--oro-light);color:var(--oro);}
+.pts-badge{font-size:11px;background:var(--verde-light);color:var(--verde);padding:2px 8px;border-radius:10px;font-weight:600;}
+/* RESULTADOS */
+.res-card{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;margin-bottom:8px;}
+.res-match{font-weight:600;font-size:14px;margin-bottom:8px;}
+.res-form{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.res-form input{width:54px;text-align:center;font-size:18px;font-weight:600;}
+.res-done{font-family:"Bebas Neue",sans-serif;font-size:24px;color:var(--verde);letter-spacing:.05em;}
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.stat-box{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;}
+.stat-num{font-family:"Bebas Neue",sans-serif;font-size:36px;color:var(--verde);}
+.stat-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
+/* TABLA */
+.rank-row{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--border);}
+.rank-row:last-child{border-bottom:none;}
+.rank-pos{font-family:"Bebas Neue",sans-serif;font-size:22px;color:var(--muted);min-width:26px;text-align:center;}
+.rank-pos.top{color:var(--oro);}
+.rank-name{flex:1;font-weight:600;font-size:14px;}
+.rank-sub{font-size:12px;color:var(--muted);}
+.rank-pts{font-family:"Bebas Neue",sans-serif;font-size:26px;color:var(--verde);min-width:56px;text-align:right;}
+.pts-lbl{font-size:10px;color:var(--muted);font-family:"Inter",sans-serif;font-weight:500;}
+/* ADMIN */
+.user-row{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);}
+.user-row:last-child{border-bottom:none;}
+.admin-badge{display:inline-block;background:var(--oro);color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;letter-spacing:.04em;text-transform:uppercase;margin-left:5px;vertical-align:middle;}
+/* PUNTOS CONFIG */
+.pts-config-row{display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);}
+.pts-config-row:last-child{border-bottom:none;}
+.pts-config-icon{font-size:20px;width:32px;text-align:center;flex-shrink:0;}
+.pts-config-info{flex:1;}
+.pts-config-name{font-size:14px;font-weight:600;}
+.pts-config-desc{font-size:12px;color:var(--muted);margin-top:2px;}
+
+/* CIERRE APUESTAS */
+.cierre-badge { display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 10px;border-radius:10px;margin-left:6px; }
+.cierre-abierto { background:#d4edd9;color:#1a6b3c; }
+.cierre-cerrado { background:#fee2e2;color:#c0392b; }
+.cierre-pronto  { background:#fdf3dc;color:#c8972b; }
+.partido-card.cerrado { opacity:.6;cursor:not-allowed; }
+.partido-card.cerrado:hover { border-color:var(--border);box-shadow:none; }
+.fase-header { background:var(--verde);color:white;border-radius:var(--radius);padding:14px 18px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px; }
+.fase-header h3 { font-family:"Bebas Neue",sans-serif;font-size:20px;letter-spacing:.04em; }
+.fase-estado { font-size:12px;opacity:.85; }
+/* CONFIG PARTIDOS */
+.config-partido-row { padding:12px 0;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap; }
+.config-partido-row:last-child { border-bottom:none; }
+.config-partido-info { flex:1;min-width:180px; }
+.config-partido-name { font-size:13px;font-weight:600; }
+.config-partido-controls { display:flex;gap:8px;flex-wrap:wrap;align-items:center; }
+.config-partido-controls input[type="datetime-local"] { font-size:12px;padding:6px 10px;width:auto; }
+.config-partido-controls input[type="checkbox"] { width:16px;height:16px;cursor:pointer;flex-shrink:0; }
+
+/* MISC */
+.pts-info{background:var(--oro-light);border:1px solid #f0d89a;border-radius:var(--radius);padding:12px 16px;margin-bottom:14px;font-size:13px;}
+.empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:14px;}
+.empty-ico{font-size:36px;margin-bottom:8px;}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--verde);color:white;padding:11px 18px;border-radius:var(--radius);font-size:14px;font-weight:500;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+.loading-overlay{position:fixed;inset:0;background:var(--verde);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999;gap:16px;}
+.loading-overlay h2{color:white;font-size:28px;}
+.spinner{width:40px;height:40px;border:4px solid rgba(255,255,255,.3);border-top-color:white;border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+
+@media(max-width:600px){
+  .frow.c2{grid-template-columns:1fr;}
+  .stats-grid{grid-template-columns:1fr 1fr;}
+  .header h1{font-size:22px;}
+  .partidos-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading-overlay">
+  
+  <div class="spinner"></div>
+  <h2 style="color:white;margin-top:12px;">Polla Mundialista 2026</h2>
+</div>
+
+<!-- AUTH -->
+<div class="auth-overlay" id="auth-overlay" style="display:none;">
+
+  <!-- Panel izquierdo — imagen -->
+  <div class="auth-img-panel">
+    <img src="./img/background-login.jpg" alt="Polla Mundialista 2026"
+      style="width:100%;height:100%;object-fit:cover;object-position:center center;display:block;"/>
+  </div>
+
+  <!-- Panel derecho — formulario -->
+  <div class="auth-form-panel">
+    <div class="auth-form-inner">
+      <div class="auth-box">
+        <div class="auth-logo">
+          <h1 id="auth-titulo">🏆 Polla Mundialista 2026</h1>
+          <p id="auth-slogan">¡Demuestra que sabes de fútbol!</p>
+        </div>
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tab-login-btn" onclick="authTab('login')">Ingresar</button>
+          <button class="auth-tab" id="tab-reg-btn" onclick="authTab('registro')">Registrarse</button>
+        </div>
+        <div class="msg msg-err" id="auth-err"></div>
+        <div class="msg msg-ok" id="auth-ok"></div>
+        <div id="registro-bloqueado" style="display:none;text-align:center;padding:16px;">
+          <div style="font-size:36px;margin-bottom:8px;">🔒</div>
+          <div style="font-size:14px;font-weight:700;color:var(--rojo);margin-bottom:8px;">Registro por invitación</div>
+          <div style="font-size:12px;color:var(--muted);">Para registrarte necesitas un link de invitación personal. Solicítalo al administrador.</div>
+        </div>
+        <div id="form-login">
+          <div class="inp-wrap"><label>Correo electr&oacute;nico</label><span class="ico">&#128231;</span><input type="email" id="l-email" placeholder="tu@correo.com"/></div>
+          <div class="inp-wrap"><label>Contrase&ntilde;a</label><span class="ico">&#128274;</span><input type="password" id="l-pass" placeholder="Tu contrase&ntilde;a" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+          <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Ingresar &rarr;</button>
+          <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;" onclick="showResetPass()">&#128273; &iquest;Olvidaste tu contrase&ntilde;a?</p>
+        </div>
+        <div id="form-registro" style="display:none;">
+          <div class="inp-wrap"><label>Nombre completo</label><span class="ico">&#128100;</span><input type="text" id="r-nom" placeholder="Tu nombre"/></div>
+          <div class="inp-wrap"><label>N&uacute;mero de celular</label><span class="ico">&#128241;</span><input type="tel" id="r-cel" placeholder="Ej: 3001234567"/></div>
+          <div class="inp-wrap"><label>Correo electr&oacute;nico</label><span class="ico">&#128231;</span><input type="email" id="r-email" placeholder="tu@correo.com"/></div>
+          <div class="inp-wrap"><label>Contrase&ntilde;a</label><span class="ico">&#128274;</span><input type="password" id="r-pass" placeholder="M&iacute;nimo 6 caracteres"/></div>
+          <div class="inp-wrap"><label>Confirmar contrase&ntilde;a</label><span class="ico">&#128274;</span><input type="password" id="r-pass2" placeholder="Repite tu contrase&ntilde;a" onkeydown="if(event.key==='Enter')doRegistro()"/></div>
+          <button class="btn btn-primary" id="btn-reg" onclick="doRegistro()">Crear cuenta &rarr;</button>
+        </div>
+        <div id="form-reset" style="display:none;">
+          <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Te enviaremos un enlace para restablecer tu contrase&ntilde;a.</p>
+          <div class="inp-wrap"><label>Correo electr&oacute;nico</label><span class="ico">&#128231;</span><input type="email" id="reset-email" placeholder="tu@correo.com"/></div>
+          <button class="btn btn-primary" id="btn-reset" onclick="doReset()">Enviar enlace &rarr;</button>
+          <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;" onclick="authTab('login')">&larr; Volver al login</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="header" id="main-header" style="display:none;">
+    <div>
+    <h1 id="hdr-titulo">🏆 Polla Mundialista 2026</h1>
+    <div class="header-sub" id="hdr-subtitulo">Estados Unidos · México · Canadá · 11 Jun – 19 Jul</div>
+    <div id="header-slogan" style="font-size:12px;color:rgba(255,255,255,.85);margin-top:2px;font-style:italic;">¡Demuestra que sabes de fútbol!</div>
+    <div id="sync-status" style="font-size:11px;margin-top:3px;opacity:.8;">
+      <span class="sync-dot" style="background:#4ade80;"></span>Conectado con Firebase
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+
+    <div class="user-pill" onclick="doLogout()" title="Cerrar sesi&oacute;n">
+      <div class="u-avatar" id="hdr-avatar">?</div>
+      <div><div class="u-name" id="hdr-nombre">...</div><div class="u-rol" id="hdr-rol"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav id="main-nav" style="display:none;">
+  <button class="active" data-nav="nueva" onclick="showTab('nueva',this)"><span id="nav-nueva-txt">&#128221; Nueva apuesta</span></button>
+  <button data-nav="partidos" onclick="showTab('partidos',this)">&#9917; Partidos</button>
+  <button data-nav="apuestas" onclick="showTab('apuestas',this)">&#128203; Apuestas</button>
+  <button data-nav="resultados" onclick="showTab('resultados',this)">&#127919; Resultados</button>
+  <button data-nav="tabla" onclick="showTab('tabla',this)">&#127885; Tabla</button>
+  <button id="nav-admin" onclick="showTab('admin',this)" style="display:none;">&#9881; Admin <span class="admin-badge">Admin</span></button>
+</nav>
+
+<!-- MAIN -->
+<div class="main" id="main-content" style="display:none;">
+
+  <!-- NUEVA APUESTA -->
+  <div class="panel active" id="tab-nueva">
+    <div class="card">
+      <div class="card-title" id="sec-nueva-titulo">Registrar nueva apuesta</div>
+      <div style="background:#d4edd9;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--verde);">
+        &#9917; Para apostar en partidos ve a la pesta&ntilde;a <strong>Partidos</strong> y haz clic en el partido.
+      </div>
+      <div class="frow c2">
+        <div>
+          <label>Tipo de apuesta especial</label>
+          <select id="inp-tipo" onchange="updateTipo()">
+            <option value="campeon">Campe&oacute;n del mundial</option>
+            <option value="subcampeon">Subcampe&oacute;n del mundial</option>
+            <option value="tercer_puesto">Tercer puesto del mundial</option>
+          </select>
+        </div>
+        <div id="wrap-grupo">
+          <label>Grupo</label>
+          <input type="text" id="inp-grupo" readonly style="background:#f9f9f9;color:var(--muted);"/>
+        </div>
+      </div>
+      <div id="sec-partido">
+        <div class="frow">
+          <div><label>Seleccionar partido</label>
+          <select id="inp-partido" onchange="autoFill()"><option value="">&#8212; Elegir partido &#8212;</option></select></div>
+        </div>
+        <div class="frow c2">
+          <div><label>Equipo local</label><input type="text" id="inp-local" placeholder="Local"/></div>
+          <div><label>Equipo visitante</label><input type="text" id="inp-visitante" placeholder="Visitante"/></div>
+        </div>
+        <div id="sec-goles">
+          <label>Resultado apostado</label>
+          <div class="frow c3">
+            <div style="text-align:center;">
+              <div id="lbl-local" style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;">Local</div>
+              <input type="number" class="score-inp" id="inp-gl" min="0" max="20" value="1"/>
+            </div>
+            <div class="vs-lbl">VS</div>
+            <div style="text-align:center;">
+              <div id="lbl-visit" style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase;">Visitante</div>
+              <input type="number" class="score-inp" id="inp-gv" min="0" max="20" value="0"/>
+            </div>
+          </div>
+        </div>
+      <div id="sec-desempate"></div>
+      </div>
+      <div id="sec-campeon" style="display:none;">
+        <div class="frow"><div>
+          <label id="lbl-campeon">Equipo campe&oacute;n</label>
+          <input type="text" id="inp-campeon" placeholder="Ej: Argentina" list="lista-equipos"/>
+          <datalist id="lista-equipos"></datalist>
+        </div></div>
+      </div>
+      <button class="btn btn-primary" id="btn-registrar" onclick="registrar()">&#10003; Registrar apuesta</button>
+    </div>
+    <div class="pts-info">
+      <strong style="color:var(--oro);" id="pts-info-label">Sistema de puntuaci&oacute;n:</strong>
+      <span id="pts-info-text">Cargando...</span>
+    </div>
+  </div>
+
+  <!-- PARTIDOS -->
+  <div class="panel" id="tab-partidos">
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-title" id="sec-partidos-titulo" style="margin-bottom:8px;">Fixture &mdash; Fase de grupos</div>
+      <div class="filters">
+        <select id="fil-fecha" onchange="renderPartidos()"><option value="">Todas las fechas</option></select>
+        <select id="fil-grupo-p" onchange="renderPartidos()"><option value="">Todos los grupos</option></select>
+      </div>
+    </div>
+    <div id="partidos-container"></div>
+  </div>
+
+  <!-- APUESTAS -->
+  <div class="panel" id="tab-apuestas">
+    <div class="export-row">
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">&#11015; CSV</button>
+      <button class="btn btn-gold btn-sm" onclick="exportXLSX()">&#11015; Excel</button>
+    </div>
+    <div class="filters">
+      <select id="fil-tipo" onchange="renderApuestas()"><option value="">Todos los tipos</option><option value="grupo">Grupos</option><option value="eliminatoria">Eliminatoria</option><option value="campeon">Campe&oacute;n</option></select>
+      <select id="fil-persona" onchange="renderApuestas()"><option value="">Todos los participantes</option></select>
+      <select id="fil-grupo-a" onchange="renderApuestas()"><option value="">Todos los grupos</option></select>
+    </div>
+    <div id="lista-apuestas"></div>
+  </div>
+
+  <!-- RESULTADOS -->
+  <div class="panel" id="tab-resultados">
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <div class="card-title" id="sec-resultados-titulo" style="margin-bottom:4px;">Ingresar resultados reales</div>
+          <p style="font-size:13px;color:var(--muted);">Al guardar se calculan los puntos autom&aacute;ticamente.</p>
+        </div>
+        <button class="btn btn-gold btn-sm" id="btn-sync" onclick="syncResultados()" style="white-space:nowrap;margin-top:4px;">&#128260; Sincronizar API</button>
+      </div>
+      <div id="sync-msg" style="display:none;margin-top:10px;padding:8px 12px;border-radius:8px;font-size:13px;"></div>
+    </div>
+    <div id="lista-resultados"></div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="panel" id="tab-tabla">
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-lbl" id="stat-lbl-apuestas">Apuestas</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-partic">0</div><div class="stat-lbl" id="stat-lbl-partic">Participantes</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-partidos">0</div><div class="stat-lbl" id="stat-lbl-partidos">Partidos cubiertos</div></div>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden;">
+      <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;">
+        <div class="card-title" id="sec-tabla-titulo" style="margin:0;">Clasificaci&oacute;n</div>
+        <div style="font-size:11px;color:var(--muted);">Tiempo real</div>
+      </div>
+      <div id="tabla-ranking"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="panel" id="tab-admin">
+    <div class="card" style="margin-bottom:14px;padding-bottom:0;">
+      <div class="card-title" style="margin-bottom:0;">Panel de administraci&oacute;n <span class="admin-badge">Admin</span></div>
+      <div style="display:flex;margin-top:12px;border-top:1px solid var(--border);overflow-x:auto;">
+        <button id="asubt-usuarios" data-nav-admin="usuarios" onclick="adminSubTab('usuarios')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--verde);border-bottom:2px solid var(--verde);white-space:nowrap;">&#128101; Usuarios</button>
+        <button id="asubt-puntos" data-nav-admin="puntos" onclick="adminSubTab('puntos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#127942; Puntuaci&oacute;n</button>
+        <button id="asubt-config" data-nav-admin="config" onclick="adminSubTab('config')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9881;&#65039; Partidos</button>
+        <button id="asubt-textos" data-nav-admin="textos" onclick="adminSubTab('textos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9997;&#65039; Textos</button>
+      </div>
+    </div>
+    <div id="admin-panel-usuarios">
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:12px;flex-wrap:wrap;">
+        <button class="btn btn-primary btn-sm" onclick="toggleFormUsuario()">+ Crear usuario</button>
+        <button class="btn btn-gold btn-sm" onclick="abrirCargueUsuarios()">&#11015; Cargue masivo</button>
+      </div>
+
+      <!-- Formulario crear usuario individual -->
+      <div id="form-nuevo-usuario" style="display:none;" class="card" style="margin-bottom:14px;">
+        <div class="card-title" style="margin-bottom:14px;">Crear usuario individual</div>
+        <div class="frow c2">
+          <div>
+            <label>Nombre completo</label>
+            <input type="text" id="nu-nombre" placeholder="Nombre del usuario" style="margin-top:5px;"/>
+          </div>
+          <div>
+            <label>N&uacute;mero de celular</label>
+            <input type="tel" id="nu-celular" placeholder="3001234567" style="margin-top:5px;"/>
+          </div>
+        </div>
+        <div class="frow">
+          <div>
+            <label>Correo electr&oacute;nico <span style="color:var(--verde);font-size:11px;">(se env&iacute;a invitaci&oacute;n autom&aacute;ticamente)</span></label>
+            <input type="email" id="nu-correo" placeholder="correo@ejemplo.com" style="margin-top:5px;"/>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-primary" style="width:auto;padding:10px 24px;" onclick="crearUsuarioIndividual()">
+            &#10003; Confirmar
+          </button>
+          <button class="btn btn-outline" style="width:auto;padding:10px 20px;" onclick="toggleFormUsuario()">
+            Cancelar
+          </button>
+        </div>
+      </div>
+
+      <div id="lista-usuarios"></div>
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title">&#128140; Links de invitaci&oacute;n</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Genera un link &uacute;nico por participante. Cada link solo puede usarse una vez.</p>
+        <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-bottom:16px;" onclick="generarLinkInvitacion()">
+          + Generar nuevo link
+        </button>
+        <div id="lista-invitaciones"></div>
+      </div>
+    </div>
+    <div id="admin-panel-config" style="display:none;">
+      <div class="card">
+        <div class="card-title">Configurar partidos</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Define fecha/hora de cierre de apuestas y criterios de desempate por partido.</p>
+        <div class="filters" style="margin-bottom:16px;">
+          <select id="cfg-fil-fecha" onchange="renderConfigPartidos()"><option value="">Todas las fechas</option></select>
+          <select id="cfg-fil-grupo" onchange="renderConfigPartidos()"><option value="">Todos los grupos</option></select>
+        </div>
+        <div id="config-partidos-lista"></div>
+      </div>
+      <div class="card" style="margin-top:0;">
+        <div class="card-title">Cierre global por fase</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Aplica a todos los partidos que no tengan cierre individual.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">
+          <div style="flex:1;min-width:200px;">
+            <label>Fase de grupos — cierre global</label>
+            <input type="datetime-local" id="cierre-global-grupos" onchange="saveCierreGlobal()"/>
+          </div>
+          <div style="flex:1;min-width:200px;">
+            <label>Eliminatorias — cierre global</label>
+            <input type="datetime-local" id="cierre-global-elim" onchange="saveCierreGlobal()"/>
+          </div>
+        </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="ocultar-apuestas" onchange="saveConfigGeneral()" style="width:16px;height:16px;"/>
+            <span style="font-size:13px;font-weight:500;">Ocultar apuestas ajenas hasta que cierre la fase</span>
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+            <input type="checkbox" id="toggle-wa" checked onchange="toggleWhatsApp()" style="width:16px;height:16px;"/>
+            <span style="font-size:13px;font-weight:500;">WhatsApp habilitado</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div id="admin-panel-textos" style="display:none;">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+          <div class="card-title" style="margin:0;">&#9997;&#65039; Textos editables</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-outline btn-sm" onclick="resetTextos()">&#8634; Restaurar todo</button>
+            <button class="btn btn-primary btn-sm" onclick="guardarTextos()">&#10003; Guardar cambios</button>
+          </div>
+        </div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Edita cualquier texto de la app. Los cambios se aplican en tiempo real y se guardan para todos los usuarios.</p>
+        <div id="textos-lista"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+          <button class="btn btn-outline btn-sm" onclick="resetTextos()">&#8634; Restaurar por defecto</button>
+          <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarTextos()">&#10003; Guardar todos los cambios</button>
+        </div>
+      </div>
+    </div>
+    <div id="admin-panel-puntos" style="display:none;">
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Personalizar app</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Edita el sl&oacute;gan que aparece en el header y la pantalla de login.</p>
+        <div style="margin-bottom:12px;">
+          <label>Sl&oacute;gan principal</label>
+          <input type="text" id="inp-slogan" placeholder="Ej: ¡Demuestra que sabes de fútbol!" style="margin-top:6px;"/>
+        </div>
+        <button class="btn btn-primary" style="width:auto;padding:10px 20px;" onclick="guardarSlogan()">&#10003; Guardar sl&oacute;gan</button>
+      </div>
+      <div class="card">
+        <div class="card-title">Configurar sistema de puntos</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;">Cambia los puntos de cada criterio. Se aplican de inmediato.</p>
+        <div id="lista-criterios"></div>
+        <div style="display:flex;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex-wrap:wrap;">
+          <input type="text" id="new-crit-nombre" placeholder="Nombre del criterio" style="flex:1;min-width:140px;"/>
+          <input type="number" id="new-crit-pts" min="0" max="99" value="2" style="width:64px;text-align:center;font-size:16px;font-weight:700;"/>
+          <button class="btn btn-primary" style="width:auto;padding:10px 18px;" onclick="agregarCriterio()">+ Agregar</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-title">Vista previa</div><div id="pts-preview"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./app.js"></script>
+
+<!-- MODAL: CARGUE MASIVO -->
+<div id="modal-cargue" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--verde);">&#11015; Cargue masivo de usuarios</h2>
+      <button onclick="cerrarCargueUsuarios()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&#10005;</button>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Opci&oacute;n 1 &mdash; Subir archivo Excel o CSV</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">El archivo debe tener columnas: <strong>nombre, celular, correo</strong></p>
+      <input type="file" id="cargue-input" accept=".xlsx,.xls,.csv" onchange="procesarArchivoCargue(event)"
+        style="font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;background:var(--bg);"/>
+      <div style="margin-top:8px;display:flex;gap:8px;">
+        <button class="btn btn-outline btn-sm" onclick="descargarPlantilla()">&#11015; Descargar plantilla</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Opci&oacute;n 2 &mdash; Lista de correos</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pega los correos separados por coma, punto y coma o l&iacute;nea nueva</p>
+      <textarea id="cargue-lista-correos" rows="4" placeholder="correo1@ejemplo.com&#10;correo2@ejemplo.com&#10;correo3@ejemplo.com"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;"></textarea>
+      <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-top:8px;" onclick="procesarListaCorreos()">Procesar lista</button>
+    </div>
+
+    <div id="cargue-preview"></div>
+  </div>
+</div>
+
+
+
+</body>
+</html>
