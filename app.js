@@ -1403,71 +1403,81 @@ function procesarListaCorreos() {
 function mostrarPreviewCargue(usuarios) {
   const container = document.getElementById('cargue-preview');
   if (!usuarios.length) { container.innerHTML = '<p style="color:var(--rojo);font-size:13px;">No se encontraron usuarios válidos</p>'; return; }
-  container.innerHTML = `
-    <div style="margin-top:14px;">
-      <div style="font-size:13px;font-weight:600;color:var(--verde);margin-bottom:8px;">
-        ✓ ${usuarios.length} usuario(s) encontrado(s)
-      </div>
-      <div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:12px;">
-        ${usuarios.map(u=>`
-          <div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:8px;">
-            <span style="flex:1;font-weight:500;">${u.nombre||'—'}</span>
-            <span style="color:var(--muted);">${u.celular||''}</span>
-            <span style="color:var(--verde);">${u.correo}</span>
-          </div>`).join('')}
-      </div>
-      <div style="margin-bottom:12px;">
-        <label style="display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;">Contraseña temporal para todos</label>
-        <input type="text" id="cargue-pass-temp" value="Polla2026" style="width:200px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;"/>
-      </div>
-      <div style="background:var(--verde-light);border:1px solid #a3d9b8;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:13px;color:var(--verde);">
-        ✉️ Se enviar&aacute; una invitaci&oacute;n por correo a cada persona con su link personal &uacute;nico.
-      </div>
-      <button class="btn btn-primary" onclick="ejecutarCargue(${JSON.stringify(usuarios).replace(/"/g,'&quot;')})" style="width:auto;padding:10px 20px;">
-        &#9993; Enviar ${usuarios.length} invitaci&oacute;n(es)
-      </button>
-    </div>`;
+  window._usuariosCargue = usuarios;
+  container.innerHTML = '<div style="margin-top:14px;">'
+    + '<div style="font-size:13px;font-weight:600;color:var(--verde);margin-bottom:8px;">✓ '+usuarios.length+' usuario(s) encontrado(s)</div>'
+    + '<div style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px;">'
+    + usuarios.map(u => '<div style="padding:8px 12px;border-bottom:1px solid var(--border);font-size:13px;display:flex;gap:8px;">'
+        + '<span style="flex:1;font-weight:500;">'+(u.nombre||'—')+'</span>'
+        + '<span style="color:var(--muted);">'+(u.celular||'')+'</span>'
+        + '<span style="color:var(--verde);">'+u.correo+'</span>'
+        + '</div>').join('')
+    + '</div>'
+    + '<button class="btn btn-primary" id="btn-ejecutar-cargue" onclick="ejecutarCargue()" style="width:100%;padding:12px 20px;">&#9997; Crear '+usuarios.length+' usuario(s)</button>'
+    + '</div>';
 }
 
-async function ejecutarCargue(usuarios) {
-  const btn = event.target;
+async function ejecutarCargue() {
+  const usuarios = window._usuariosCargue || [];
+  const passTemp = (document.getElementById('cargue-password')||{}).value || '';
+  if (!passTemp || passTemp.length < 6) { toast('⚠️ Define una contraseña temporal de al menos 6 caracteres'); return; }
+  if (!usuarios.length) { toast('⚠️ No hay usuarios para cargar'); return; }
+
+  const btn = document.getElementById('btn-ejecutar-cargue');
   btn.disabled = true;
+  btn.textContent = 'Creando usuarios...';
   let ok = 0, err = 0;
 
-  btn.textContent = 'Enviando invitaciones...';
   for (const u of usuarios) {
     try {
-      // Cargue masivo: generar link SIN marcar como invitado
-      const token  = 'inv_' + Date.now() + '_' + Math.random().toString(36).substr(2,8);
-      const base   = window.location.origin + window.location.pathname;
-      const ref    = btoa(currentUser.uid + '|' + currentUser.nombre + '|' + token);
-      const link   = base + '?ref=' + ref;
-      // Guardar invitacion sin invitadoPor para que no marque como invitado
-      await db.collection('invitaciones').doc(token).set({
-        token,
-        creadoPor:        currentUser.uid,
-        creadoPorNombre:  currentUser.nombre,
-        correoDestino:    u.correo || '',
-        nombreDestino:    u.nombre || '',
-        usado:            false,
-        esCargue:         true,
-        creado:           firebase.firestore.FieldValue.serverTimestamp()
+      const apiKey = firebase.app().options.apiKey;
+      const resp = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + apiKey, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({email: u.correo, password: passTemp, returnSecureToken: false})
       });
-      // Enviar correo
-      if (u.correo) await enviarCorreoInvitacion(u.correo, u.nombre, link);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      const uid = data.localId;
+      await db.collection('usuarios').doc(uid).set({
+        nombre:             u.nombre || u.correo.split('@')[0],
+        celular:            u.celular || '',
+        email:              u.correo,
+        rol:                'user',
+        debeActualizarPass: true,
+        creado:             firebase.firestore.FieldValue.serverTimestamp()
+      });
       ok++;
     } catch(e) {
-      console.error('Error invitando ' + u.correo + ':', e.message);
+      console.error('Error creando ' + u.correo + ':', e.message);
       err++;
     }
-    btn.textContent = 'Enviando... ' + ok + '/' + usuarios.length;
+    btn.textContent = 'Creando... ' + (ok+err) + '/' + usuarios.length;
   }
 
-  toast('\u2713 ' + ok + ' invitaci\u00F3n(es) enviada(s)' + (err ? ' \u00B7 ' + err + ' errores' : ''));
+  const base = window.location.origin + window.location.pathname;
+  await db.collection('config').doc('acceso').set({
+    link: base, passTemp, actualizadoPor: currentUser.uid,
+    actualizado: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  document.getElementById('cargue-resultado').style.display = 'block';
+  document.getElementById('cargue-resultado-texto').textContent = ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' error(es)' : '');
+  document.getElementById('cargue-link-unico').textContent = base;
+  const linkDisplay = document.getElementById('link-unico-display');
+  if (linkDisplay) linkDisplay.textContent = base;
+
+  toast('✓ ' + ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' errores' : ''));
   btn.disabled = false;
-  cerrarCargueUsuarios();
   renderUsuarios();
 }
+
+function copiarLinkUnico() {
+  const el = document.getElementById('cargue-link-unico') || document.getElementById('link-unico-display');
+  if (!el || !el.textContent || el.textContent.includes('Carga')) { toast('⚠️ No hay link generado'); return; }
+  navigator.clipboard.writeText(el.textContent).then(() => toast('✓ Link copiado'));
+}
+
 
 // ============================================================
 // INVITACIONES
