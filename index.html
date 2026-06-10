@@ -278,9 +278,45 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
   .header h1{font-size:22px;}
   .partidos-grid{grid-template-columns:1fr;}
 }
+
+/* MODAL AUTORIZACIÓN */
+#modal-autorizacion{position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;padding:16px;}
+#modal-autorizacion .modal-box{background:#fff;border-radius:16px;max-width:560px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.4);}
+#modal-autorizacion .modal-header{background:#1f3c71;color:white;padding:20px 24px;text-align:center;}
+#modal-autorizacion .modal-header h2{font-size:16px;font-weight:700;margin:0;letter-spacing:.03em;}
+#modal-autorizacion .modal-body{padding:20px 24px;overflow-y:auto;flex:1;font-size:13px;color:#333;line-height:1.7;}
+#modal-autorizacion .modal-footer{padding:16px 24px;border-top:1px solid #eee;display:flex;flex-direction:column;gap:12px;}
+#modal-autorizacion .check-row{display:flex;align-items:flex-start;gap:10px;font-size:13px;color:#333;cursor:pointer;}
+#modal-autorizacion .check-row input{margin-top:3px;width:16px;height:16px;cursor:pointer;accent-color:#1f3c71;}
+#btn-aceptar-datos{background:#1f3c71;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;width:100%;}
+#btn-aceptar-datos:disabled{background:#aaa;cursor:not-allowed;}
+#btn-aceptar-datos:not(:disabled):hover{background:#162d57;}
 </style>
 </head>
 <body>
+
+<!-- MODAL AUTORIZACIÓN DATOS -->
+<div id="modal-autorizacion">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div style="font-size:28px;margin-bottom:6px;">🔏</div>
+      <h2>AUTORIZACIÓN DE TRATAMIENTO DE DATOS PERSONALES</h2>
+    </div>
+    <div class="modal-body">
+      <p>Al acceder a esta plataforma, declaro que como trabajador(a) de <strong>Rionegro MRO Zona Franca S.A.S. (MROH)</strong>, de manera libre, previa, expresa e informada, autorizo a MROH para que comparta con <strong>GIRALDO CEBALLOS CARLOS MARIO</strong>, titular del establecimiento de comercio <strong>GIRAMASTER</strong>, mis datos personales correspondientes a nombre completo, número de cédula de ciudadanía, número de celular y correo electrónico.</p>
+      <p>Igualmente, autorizo a <strong>GIRAMASTER</strong> para que los recopile, almacene y utilice <strong>exclusivamente</strong> con la finalidad de administrar mi participación en la actividad recreativa denominada <strong>"Polla Mundialista"</strong>, organizada por MROH como evento de bienestar laboral.</p>
+      <p>El tratamiento de mis datos quedará limitado al desarrollo de dicha actividad y cesará una vez esta concluya, sin que puedan ser utilizados para ningún otro propósito.</p>
+      <p>Esta autorización se otorga en el marco de la <strong>Ley 1581 de 2012</strong> y sus normas reglamentarias.</p>
+    </div>
+    <div class="modal-footer">
+      <label class="check-row">
+        <input type="checkbox" id="chk-autoriza" onchange="document.getElementById('btn-aceptar-datos').disabled=!this.checked;">
+        <span>He leído y acepto la autorización de tratamiento de mis datos personales.</span>
+      </label>
+      <button id="btn-aceptar-datos" disabled onclick="aceptarAutorizacion()">Acepto y continúo →</button>
+    </div>
+  </div>
+</div>
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loading-overlay">

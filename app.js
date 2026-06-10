@@ -3,6 +3,25 @@
 // CONSTANTES
 const ADMIN_EMAIL        = "mundialmroh@gmail.com";
 const API_KEY_FOOTBALL   = "ab464e64f0f64d9a97a15ed0c377de5c";
+
+// ============================================================
+// AUTORIZACIÓN DE DATOS
+// ============================================================
+function verificarAutorizacion() {
+  const autorizado = localStorage.getItem('mroh_datos_autorizado');
+  const modal = document.getElementById('modal-autorizacion');
+  if (autorizado === '1') {
+    if (modal) modal.style.display = 'none';
+  }
+  // Si no está autorizado, el modal permanece visible (display:flex por defecto)
+}
+
+function aceptarAutorizacion() {
+  localStorage.setItem('mroh_datos_autorizado', '1');
+  const modal = document.getElementById('modal-autorizacion');
+  if (modal) modal.style.display = 'none';
+}
+
 const EMAILJS_SERVICE_ID = "service_lsd2gu4";
 const EMAILJS_TEMPLATE   = "template_t8roo8b";
 
@@ -2066,6 +2085,7 @@ async function guardarApuestaModal(pid) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  verificarAutorizacion();
   init();
   updateTipo();
   cargarResultados();
