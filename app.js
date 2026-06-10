@@ -3,8 +3,8 @@
 // CONSTANTES
 const ADMIN_EMAIL        = "mundialmroh@gmail.com";
 const API_KEY_FOOTBALL   = "8ccb25f8512b4cc51e437eae1b0edca7";
-const EMAILJS_SERVICE_ID = "service_l5i5rnn";
-const EMAILJS_TEMPLATE   = "template_cyfytje";
+const EMAILJS_SERVICE_ID = "service_lsd2gu4";
+const EMAILJS_TEMPLATE   = "template_t8roo8b";
 
 const PARTIDOS = [
   {id:"A1",grupo:"Grupo A",local:"México",visitante:"Sudáfrica",fecha:"11 Jun",sede:"Ciudad de México"},
@@ -302,6 +302,8 @@ function showAuth() {
   document.getElementById("main-content").style.display  = "none";
   document.getElementById("nav-admin").style.display     = "none";
   if (unsubApuestas) { unsubApuestas(); unsubApuestas = null; }
+  // Verificar invitacion al mostrar auth
+  setTimeout(verificarInvitacion, 300);
 }
 
 // SUSCRIPCIÓN TIEMPO REAL A APUESTAS
@@ -2054,7 +2056,6 @@ document.addEventListener('DOMContentLoaded', () => {
   init();
   updateTipo();
   cargarResultados();
-  verificarInvitacion();
   // Fallback: si onAuthStateChanged no responde en 6s, mostrar login
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
@@ -2062,6 +2063,7 @@ document.addEventListener('DOMContentLoaded', () => {
       console.warn('Firebase timeout — mostrando login');
       overlay.style.display = 'none';
       document.getElementById('auth-overlay').style.display = 'flex';
+      setTimeout(verificarInvitacion, 200);
     }
   }, 6000);
 });
