@@ -586,12 +586,12 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 
       <div id="lista-usuarios"></div>
       <div class="card" style="margin-top:14px;">
-        <div class="card-title">&#128140; Links de invitaci&oacute;n</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Genera un link &uacute;nico por participante. Cada link solo puede usarse una vez.</p>
-        <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-bottom:16px;" onclick="generarLinkInvitacion()">
-          + Generar nuevo link
-        </button>
-        <div id="lista-invitaciones"></div>
+        <div class="card-title">&#128279; Link de acceso general</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Link único para que todos los participantes cargados accedan a la plataforma.</p>
+        <div id="link-unico-display" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:13px;color:#1f3c71;font-weight:600;word-break:break-all;margin-bottom:10px;">
+          Carga usuarios para generar el link
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="copiarLinkUnico()">📋 Copiar link</button>
       </div>
     </div>
     <div id="admin-panel-config" style="display:none;">
@@ -682,26 +682,52 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <h2 style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--verde);">&#11015; Cargue masivo de usuarios</h2>
       <button onclick="cerrarCargueUsuarios()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);">&#10005;</button>
     </div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px;">El archivo debe tener columnas: <strong>nombre, celular, correo</strong></p>
+    <input type="file" id="cargue-input" accept=".xlsx,.xls,.csv" onchange="procesarArchivoCargue(event)"
+      style="font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;background:var(--bg);margin-bottom:12px;"/>
+    <button class="btn btn-outline btn-sm" onclick="descargarPlantilla()" style="margin-bottom:20px;">&#11015; Descargar plantilla</button>
 
-    <div style="margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Opci&oacute;n 1 &mdash; Subir archivo Excel o CSV</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">El archivo debe tener columnas: <strong>nombre, celular, correo</strong></p>
-      <input type="file" id="cargue-input" accept=".xlsx,.xls,.csv" onchange="procesarArchivoCargue(event)"
-        style="font-size:13px;padding:8px;border:1px solid var(--border);border-radius:8px;width:100%;background:var(--bg);"/>
-      <div style="margin-top:8px;display:flex;gap:8px;">
-        <button class="btn btn-outline btn-sm" onclick="descargarPlantilla()">&#11015; Descargar plantilla</button>
-      </div>
-    </div>
-
-    <div style="border-top:1px solid var(--border);padding-top:20px;margin-bottom:20px;">
-      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em;">Opci&oacute;n 2 &mdash; Lista de correos</div>
-      <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">Pega los correos separados por coma, punto y coma o l&iacute;nea nueva</p>
-      <textarea id="cargue-lista-correos" rows="4" placeholder="correo1@ejemplo.com&#10;correo2@ejemplo.com&#10;correo3@ejemplo.com"
-        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;resize:vertical;"></textarea>
-      <button class="btn btn-primary" style="width:auto;padding:10px 20px;margin-top:8px;" onclick="procesarListaCorreos()">Procesar lista</button>
+    <div style="border-top:1px solid var(--border);padding-top:16px;margin-bottom:16px;">
+      <label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:6px;">&#128274; Contraseña temporal para todos</label>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:8px;">Los usuarios deberán cambiarla en su primer ingreso.</p>
+      <input type="text" id="cargue-password" placeholder="Ej: Mundial2026" maxlength="30"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:600;letter-spacing:.05em;"/>
     </div>
 
     <div id="cargue-preview"></div>
+
+    <div id="cargue-resultado" style="display:none;margin-top:16px;padding:14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;">
+      <div style="font-weight:700;color:#166534;margin-bottom:8px;">✅ Usuarios creados exitosamente</div>
+      <div style="font-size:13px;color:#166534;margin-bottom:10px;" id="cargue-resultado-texto"></div>
+      <div style="background:white;border:1px solid #bbf7d0;border-radius:8px;padding:12px;">
+        <div style="font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px;">🔗 Link de acceso para todos:</div>
+        <div style="font-size:13px;font-weight:600;color:#1f3c71;word-break:break-all;" id="cargue-link-unico"></div>
+        <button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick="copiarLinkUnico()">📋 Copiar link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: CAMBIO DE CONTRASEÑA OBLIGATORIO -->
+<div id="modal-cambio-pass" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:9998;align-items:center;justify-content:center;padding:16px;">
+  <div style="background:white;border-radius:16px;padding:28px;width:100%;max-width:420px;">
+    <div style="text-align:center;margin-bottom:20px;">
+      <div style="font-size:36px;">🔐</div>
+      <h2 style="font-size:18px;font-weight:700;margin:8px 0 4px;">Cambia tu contraseña</h2>
+      <p style="font-size:13px;color:var(--muted);">Por seguridad debes crear una contraseña personal antes de continuar.</p>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;">Nueva contraseña</label>
+      <input type="password" id="nueva-pass-1" placeholder="Mínimo 6 caracteres"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:5px;"/>
+    </div>
+    <div style="margin-bottom:16px;">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;">Confirmar contraseña</label>
+      <input type="password" id="nueva-pass-2" placeholder="Repite la contraseña"
+        style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-top:5px;"/>
+    </div>
+    <div id="cambio-pass-err" style="color:var(--rojo);font-size:13px;margin-bottom:10px;display:none;"></div>
+    <button class="btn btn-primary" style="width:100%;" onclick="guardarNuevaPassword()">Guardar contraseña →</button>
   </div>
 </div>
 

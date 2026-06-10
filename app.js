@@ -22,6 +22,39 @@ function aceptarAutorizacion() {
   if (modal) modal.style.display = 'none';
 }
 
+// ============================================================
+// CAMBIO DE CONTRASEÑA OBLIGATORIO (primer ingreso)
+// ============================================================
+function verificarCambioPassword(perfil) {
+  if (perfil && perfil.debeActualizarPass) {
+    const modal = document.getElementById('modal-cambio-pass');
+    if (modal) modal.style.display = 'flex';
+  }
+}
+
+async function guardarNuevaPassword() {
+  const p1 = document.getElementById('nueva-pass-1').value;
+  const p2 = document.getElementById('nueva-pass-2').value;
+  const errEl = document.getElementById('cambio-pass-err');
+  errEl.style.display = 'none';
+
+  if (!p1 || p1.length < 6) { errEl.textContent = 'La contraseña debe tener al menos 6 caracteres'; errEl.style.display = 'block'; return; }
+  if (p1 !== p2) { errEl.textContent = 'Las contraseñas no coinciden'; errEl.style.display = 'block'; return; }
+
+  try {
+    const user = firebase.auth().currentUser;
+    await user.updatePassword(p1);
+    // Remove flag in Firestore
+    await db.collection('usuarios').doc(user.uid).update({ debeActualizarPass: false });
+    currentUser.debeActualizarPass = false;
+    document.getElementById('modal-cambio-pass').style.display = 'none';
+    toast('✓ Contraseña actualizada correctamente');
+  } catch(e) {
+    errEl.textContent = 'Error: ' + (e.message || 'No se pudo actualizar');
+    errEl.style.display = 'block';
+  }
+}
+
 const EMAILJS_SERVICE_ID = "service_lsd2gu4";
 const EMAILJS_TEMPLATE   = "template_t8roo8b";
 
@@ -262,14 +295,16 @@ auth.onAuthStateChanged(async user => {
     const snap = await db.collection("usuarios").doc(user.uid).get();
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
-      uid:         user.uid,
-      email:       user.email,
-      nombre:      perfil.nombre || user.email,
-      celular:     perfil.celular || "",
-      rol:         perfil.rol || "user",
-      invitadoPor: perfil.invitadoPor || null
+      uid:              user.uid,
+      email:            user.email,
+      nombre:           perfil.nombre || user.email,
+      celular:          perfil.celular || "",
+      rol:              perfil.rol || "user",
+      invitadoPor:      perfil.invitadoPor || null,
+      debeActualizarPass: perfil.debeActualizarPass || false
     };
     showApp();
+    verificarCambioPassword(perfil);
   } else {
     currentUser = null;
     showAuth();
@@ -495,6 +530,7 @@ function showTab(id, btn) {
   if(id==="apuestas")  renderApuestas();
   if(id==="tabla")     renderTabla();
   if(id==="resultados")renderResultados();
+  if(id==="admin"){renderUsuarios();cargarLinkUnico();}
   if(id==="partidos")  renderPartidos();
   if(id==="admin")     { adminSubTab('usuarios'); }
 }
@@ -1107,6 +1143,17 @@ function renderConfigPartidos() {
       }).join('')}
     </div>`;
   }).join('');
+}
+
+async function cargarLinkUnico() {
+  try {
+    const snap = await db.collection('config').doc('acceso').get();
+    if (snap.exists) {
+      const link = snap.data().link;
+      const el = document.getElementById('link-unico-display');
+      if (el && link) el.textContent = link;
+    }
+  } catch(e) {}
 }
 
 async function renderUsuarios() {
