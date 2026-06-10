@@ -1490,6 +1490,10 @@ async function verificarInvitacion() {
   const form   = document.getElementById('form-registro');
   const bloq   = document.getElementById('registro-bloqueado');
 
+  // Ocultar tab por defecto siempre al inicio
+  if (tab) tab.style.display = 'none';
+  if (form) form.style.display = 'none';
+
   if (!ref) {
     // Sin link — bloquear registro
     invitacionValida = false;
