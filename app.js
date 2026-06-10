@@ -757,7 +757,7 @@ function renderResultados() {
         return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
           <span style="font-size:20px;">${e.icon}</span>
           <div style="flex:1;font-weight:600;">${e.label}</div>
-          ${currentUser.rol==='admin' ? \`<input type="text" id="res-${e.id}" placeholder="Equipo ganador" list="lista-equipos" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/><button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial('${e.id}')">Guardar</button>\` : '<span style="color:var(--muted);font-size:13px;">⏳ Pendiente</span>'}
+          ${currentUser.rol==='admin' ? '<input type="text" id="res-'+e.id+'" placeholder="Equipo ganador" list="lista-equipos" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/><button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial(\'' + e.id + '\')" >Guardar</button>' : '<span style="color:var(--muted);font-size:13px;">⏳ Pendiente</span>'}
         </div>`;
       }).join('')}
     </div>`;
