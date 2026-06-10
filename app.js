@@ -778,7 +778,7 @@ function renderResultados() {
         if(r) return `<div class="res-card">
           <div class="res-match">${p.grupo} · ${p.local} vs ${p.visitante}</div>
           <div class="res-form"><span style="font-weight:600;">${p.local}</span><div class="res-done">${r.local} – ${r.visitante}</div><span style="font-weight:600;">${p.visitante}</span>
-          ${currentUser.rol==='admin' ? '<button class="btn btn-outline btn-sm" onclick="borrarResultado(''+p.id+'')" style="margin-left:auto;">✕</button>' : ''}</div>
+          ${currentUser.rol==='admin' ? `<button class="btn btn-outline btn-sm" onclick="borrarResultado('${p.id}')" style="margin-left:auto;">✕</button>` : ''}</div>
           ${cfg.tarjetas ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">🟨 Tarjetas: ${r.tarjetasLocal||0}–${r.tarjetasVisitante||0}</div>` : ''}
           ${cfg.esquinas ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">🔄 Esquinas: ${r.esquinasLocal||0}–${r.esquinasVisitante||0}</div>` : ''}
           <div style="font-size:12px;color:var(--muted);margin-top:6px;">${n} apuesta(s)</div></div>`;
