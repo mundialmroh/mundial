@@ -932,7 +932,15 @@ function renderTabla() {
 // PUNTUACIÓN CONFIGURABLE
 function renderPtsInfo() {
   const el = document.getElementById("pts-info-text");
-  if(el) el.innerHTML = criterios.map(c=>`${c.icon} ${c.nombre} = <strong>${c.pts} pts</strong>`).join(" · ");
+  if(!el) return;
+  el.innerHTML = criterios.map(c =>
+    '<div class="pts-card">'
+    + '<div class="pts-icon">'+c.icon+'</div>'
+    + '<div class="pts-nombre">'+c.nombre+'</div>'
+    + '<div class="pts-valor">'+c.pts+'</div>'
+    + '<div class="pts-label">puntos</div>'
+    + '</div>'
+  ).join('');
 }
 function renderCriterios() {
   const c = document.getElementById("lista-criterios");
