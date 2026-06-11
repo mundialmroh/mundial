@@ -1439,6 +1439,26 @@ async function ejecutarCargue() {
       const data = await resp.json();
       if (data.error) {
         if (data.error.message === 'EMAIL_EXISTS') { ok++; continue; } // ya existe, lo contamos como OK
+        if (data.error.message && data.error.message.includes('TOO_MANY_ATTEMPTS')) {
+          // Rate limit - wait 5 seconds and retry once
+          await new Promise(r => setTimeout(r, 5000));
+          const resp2 = await fetch('https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=' + apiKey, {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({email: u.correo, password: passTemp, returnSecureToken: false})
+          });
+          const data2 = await resp2.json();
+          if (data2.error) {
+            if (data2.error.message === 'EMAIL_EXISTS') { ok++; continue; }
+            throw new Error(data2.error.message);
+          }
+          const uid2 = data2.localId;
+          await db.collection('usuarios').doc(uid2).set({
+            nombre: u.nombre || u.correo.split('@')[0], celular: u.celular || '',
+            email: u.correo, rol: 'user', debeActualizarPass: true,
+            creado: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          ok++; continue;
+        }
         throw new Error(data.error.message);
       }
       const uid = data.localId;
