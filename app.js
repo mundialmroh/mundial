@@ -1437,7 +1437,10 @@ async function ejecutarCargue() {
         body: JSON.stringify({email: u.correo, password: passTemp, returnSecureToken: false})
       });
       const data = await resp.json();
-      if (data.error) throw new Error(data.error.message);
+      if (data.error) {
+        if (data.error.message === 'EMAIL_EXISTS') { ok++; continue; } // ya existe, lo contamos como OK
+        throw new Error(data.error.message);
+      }
       const uid = data.localId;
       await db.collection('usuarios').doc(uid).set({
         nombre:             u.nombre || u.correo.split('@')[0],
@@ -1453,6 +1456,7 @@ async function ejecutarCargue() {
       err++;
     }
     btn.textContent = 'Creando... ' + (ok+err) + '/' + usuarios.length;
+      await new Promise(r => setTimeout(r, 300)); // delay para evitar rate limit
   }
 
   const base = window.location.origin + window.location.pathname;
