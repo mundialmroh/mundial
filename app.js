@@ -1163,6 +1163,16 @@ async function cargarLinkUnico() {
   } catch(e) {}
 }
 
+
+function filtrarUsuarios(query) {
+  const q = query.toLowerCase().trim();
+  const items = document.querySelectorAll('#lista-usuarios .user-row');
+  items.forEach(item => {
+    const texto = item.textContent.toLowerCase();
+    item.style.display = !q || texto.includes(q) ? '' : 'none';
+  });
+}
+
 function invalidarCache() {
   _cachedUsuarios   = null;
   _cachedApuestasAd = null;

@@ -585,6 +585,11 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         </div>
       </div>
 
+      <div style="margin-bottom:12px;">
+        <input type="text" id="buscador-usuarios" placeholder="🔍 Buscar por nombre o correo..."
+          oninput="filtrarUsuarios(this.value)"
+          style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white;"/>
+      </div>
       <div id="lista-usuarios"></div>
       <div class="card" style="margin-top:14px;">
         <div class="card-title">&#128279; Link de acceso general</div>
