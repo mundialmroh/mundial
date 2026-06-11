@@ -1426,7 +1426,7 @@ async function ejecutarCargue() {
   const btn = document.getElementById('btn-ejecutar-cargue');
   btn.disabled = true;
   btn.textContent = 'Creando usuarios...';
-  let ok = 0, err = 0;
+  let ok = 0, err = 0, errores = [];
 
   for (const u of usuarios) {
     try {
@@ -1449,7 +1449,7 @@ async function ejecutarCargue() {
       });
       ok++;
     } catch(e) {
-      console.error('Error creando ' + u.correo + ':', e.message);
+      console.error('Error creando ' + u.correo + ':', e.message); errores.push(u.correo + ': ' + e.message);
       err++;
     }
     btn.textContent = 'Creando... ' + (ok+err) + '/' + usuarios.length;
@@ -1462,7 +1462,7 @@ async function ejecutarCargue() {
   });
 
   document.getElementById('cargue-resultado').style.display = 'block';
-  document.getElementById('cargue-resultado-texto').textContent = ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' error(es)' : '');
+  document.getElementById('cargue-resultado-texto').textContent = ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' error(es)' : '') + (errores.length ? ' | Primer error: ' + errores[0] : '');
   document.getElementById('cargue-link-unico').textContent = base;
   const linkDisplay = document.getElementById('link-unico-display');
   if (linkDisplay) linkDisplay.textContent = base;
@@ -1470,6 +1470,55 @@ async function ejecutarCargue() {
   toast('✓ ' + ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' errores' : ''));
   btn.disabled = false;
   renderUsuarios();
+}
+
+
+// ============================================================
+// BORRAR TODOS LOS USUARIOS
+// ============================================================
+async function confirmarBorrarTodosUsuarios() {
+  const confirm1 = window.confirm('⚠️ ¿Estás seguro que quieres BORRAR TODOS los usuarios?\nEsta acción no se puede deshacer.');
+  if (!confirm1) return;
+  const confirm2 = window.confirm('🚨 ÚLTIMA CONFIRMACIÓN\n¿Borrar todos los usuarios excepto el admin?');
+  if (!confirm2) return;
+  await borrarTodosUsuarios();
+}
+
+async function borrarTodosUsuarios() {
+  const toast_el = document.querySelector('.toast');
+  try {
+    // Get all users from Firestore
+    const snap = await db.collection('usuarios').get();
+    const apiKey = firebase.app().options.apiKey;
+    let ok = 0, err = 0;
+
+    toast('🗑️ Borrando usuarios...');
+
+    for (const doc of snap.docs) {
+      const data = doc.data();
+      // Skip admin
+      if (data.email === ADMIN_EMAIL || data.rol === 'admin') continue;
+      try {
+        // Delete from Firestore
+        await db.collection('usuarios').doc(doc.id).delete();
+        // Delete from Firebase Auth via REST
+        const idTokenRes = await firebase.auth().currentUser.getIdToken();
+        await fetch('https://identitytoolkit.googleapis.com/v1/accounts:delete?key=' + apiKey, {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({idToken: idTokenRes, localId: doc.id})
+        });
+        ok++;
+      } catch(e) {
+        // If Auth delete fails, at least Firestore was deleted
+        err++;
+      }
+    }
+    toast('✓ ' + ok + ' usuario(s) eliminado(s)' + (err ? ' · ' + err + ' no eliminados de Auth' : ''));
+    renderUsuarios();
+  } catch(e) {
+    toast('❌ Error: ' + e.message);
+  }
 }
 
 function copiarLinkUnico() {
