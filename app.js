@@ -157,6 +157,12 @@ let resultados  = {};
 let nextId      = 1;
 let unsubApuestas = null;
 
+// CACHÉ
+let _cachedUsuarios   = null;  // cache de usuarios Firestore
+let _cachedApuestasAd = null;  // cache de apuestas para admin
+let _cacheTs          = 0;     // timestamp del último fetch
+const CACHE_TTL       = 60000; // 60 segundos de vida del caché
+
 const CRITERIOS_DEFAULT = [
   {id:"resultado_exacto",nombre:"Resultado exacto",  desc:"Marcador final correcto",icon:"🎯",pts:3,fijo:true},
   {id:"ganador_correcto",nombre:"Ganador correcto",  desc:"Acertó quién gana",      icon:"✅",pts:1,fijo:true},
@@ -931,6 +937,7 @@ async function cargarResultados() {
 
 // RENDER TABLA
 function renderTabla() {
+  // usa apuestas ya en memoria — no hace fetch adicional
   document.getElementById("st-total").textContent    = apuestas.length;
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   document.getElementById("st-partic").textContent   = personas.length;
@@ -1156,6 +1163,24 @@ async function cargarLinkUnico() {
   } catch(e) {}
 }
 
+function invalidarCache() {
+  _cachedUsuarios   = null;
+  _cachedApuestasAd = null;
+  _cacheTs          = 0;
+}
+
+async function cargarUsuariosCache(force = false) {
+  const ahora = Date.now();
+  if (!force && _cachedUsuarios && (ahora - _cacheTs) < CACHE_TTL) return;
+  const [snapU, snapA] = await Promise.all([
+    db.collection('usuarios').get(),
+    db.collection('apuestas').get()
+  ]);
+  _cachedUsuarios   = snapU.docs.map(d => ({id: d.id, ...d.data()}));
+  _cachedApuestasAd = snapA.docs.map(d => ({id: d.id, ...d.data()}));
+  _cacheTs = Date.now();
+}
+
 async function renderUsuarios() {
   const container = document.getElementById("lista-usuarios");
   container.innerHTML = '<div class="empty">Cargando...</div>';
@@ -1225,7 +1250,7 @@ async function toggleAdmin(uid, nombre, rolActual) {
 async function eliminarUsuario(uid, nombre) {
   if(!confirm(`¿Eliminar a ${nombre}? Sus apuestas se mantendrán.`)) return;
   await db.collection("usuarios").doc(uid).delete();
-  toast("Usuario eliminado"); renderUsuarios();
+  toast("Usuario eliminado"); invalidarCache(); renderUsuarios();
 }
 
 function enviarWhatsApp(celular, nombre) {
@@ -1243,7 +1268,8 @@ function enviarWhatsApp(celular, nombre) {
 }
 
 async function enviarRecordatorioMasivo() {
-  const snap = await db.collection("usuarios").get();
+  await cargarUsuariosCache();
+  const usuarios = _cachedUsuarios;
   const conApuestas = new Set(apuestas.map(a=>a.uid));
   const sinApostar = snap.docs.map(d=>({uid:d.id,...d.data()})).filter(u=>!conApuestas.has(u.uid)&&u.celular);
   if (!sinApostar.length) { toast("Todos ya tienen apuestas 🎉"); return; }
@@ -1255,7 +1281,8 @@ async function enviarRecordatorioMasivo() {
 }
 
 async function copiarListaSinApostar() {
-  const snap = await db.collection("usuarios").get();
+  await cargarUsuariosCache();
+  const usuarios = _cachedUsuarios;
   const conApuestas = new Set(apuestas.map(a=>a.uid));
   const sinApostar = snap.docs.map(d=>({uid:d.id,...d.data()})).filter(u=>!conApuestas.has(u.uid));
   const lista = sinApostar.map(u=>`• ${u.nombre} (${u.celular||u.email})`).join(' ');
@@ -1493,6 +1520,7 @@ async function ejecutarCargue() {
 
   toast('✓ ' + ok + ' usuario(s) creado(s)' + (err ? ' · ' + err + ' errores' : ''));
   btn.disabled = false;
+  invalidarCache();
   renderUsuarios();
 }
 
@@ -1512,7 +1540,8 @@ async function borrarTodosUsuarios() {
   const toast_el = document.querySelector('.toast');
   try {
     // Get all users from Firestore
-    const snap = await db.collection('usuarios').get();
+  await cargarUsuariosCache();
+  const snap = {docs: _cachedUsuarios.map(u => ({id: u.id, data: () => u}))};
     const apiKey = firebase.app().options.apiKey;
     let ok = 0, err = 0;
 
