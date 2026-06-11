@@ -1185,11 +1185,20 @@ function invalidarCache() {
 async function cargarUsuariosCache(force = false) {
   const ahora = Date.now();
   if (!force && _cachedUsuarios && (ahora - _cacheTs) < CACHE_TTL) return;
-  const [snapU, snapA] = await Promise.all([
-    db.collection('usuarios').get(),
-    db.collection('apuestas').get()
-  ]);
-  _cachedUsuarios   = snapU.docs.map(d => ({id: d.id, ...d.data()}));
+
+  // Paginación para traer todos los usuarios (Firestore limita a 1000 por query)
+  let allUsuarios = [];
+  let lastDoc = null;
+  do {
+    let query = db.collection('usuarios').orderBy('email').limit(500);
+    if (lastDoc) query = query.startAfter(lastDoc);
+    const snap = await query.get();
+    allUsuarios = allUsuarios.concat(snap.docs.map(d => ({id: d.id, ...d.data()})));
+    lastDoc = snap.docs.length === 500 ? snap.docs[snap.docs.length - 1] : null;
+  } while (lastDoc);
+
+  const snapA = await db.collection('apuestas').get();
+  _cachedUsuarios   = allUsuarios;
   _cachedApuestasAd = snapA.docs.map(d => ({id: d.id, ...d.data()}));
   _cacheTs = Date.now();
 }
