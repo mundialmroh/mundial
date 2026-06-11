@@ -1166,11 +1166,13 @@ async function cargarLinkUnico() {
 
 function filtrarUsuarios(query) {
   const q = query.toLowerCase().trim();
-  const items = document.querySelectorAll('#lista-usuarios .user-row');
-  items.forEach(item => {
-    const texto = item.textContent.toLowerCase();
-    item.style.display = !q || texto.includes(q) ? '' : 'none';
-  });
+  if (!_cachedUsuarios) return;
+  const filtrados = !q ? _cachedUsuarios : _cachedUsuarios.filter(u =>
+    (u.nombre||'').toLowerCase().includes(q) ||
+    (u.email||'').toLowerCase().includes(q) ||
+    (u.celular||'').toLowerCase().includes(q)
+  );
+  renderListaUsuarios(filtrados);
 }
 
 function invalidarCache() {
@@ -1214,36 +1216,61 @@ async function renderUsuarios() {
           </div>
         </div>` : '';
 
-    container.innerHTML = `<div class="card" style="padding:0;overflow:hidden;">
-      ${btnRecordatorio}
-      ${users.map(u=>{
-        const ini = u.nombre.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
-        const isMe = u.uid===currentUser.uid;
-        const tieneApuesta = conApuestas.has(u.uid);
-        const isAdmin = u.rol==="admin";
-        return `<div class="user-row">
-          <div style="width:38px;height:38px;border-radius:50%;background:${isAdmin?"var(--oro)":"var(--verde)"};color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
-          <div style="flex:1;">
-            <div style="font-weight:600;font-size:14px;">${u.nombre}${isAdmin?'<span class="admin-badge">Admin</span>':''}
-              ${!tieneApuesta?'<span style="background:#fee2e2;color:var(--rojo);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px;">Sin apuestas</span>':''}
-            </div>
-            <div style="font-size:12px;color:var(--muted);">📱 ${u.celular||"—"} · ${u.email}</div>
-          </div>
-          <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
-            ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
-            ${!isMe?`
-              <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
-                ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
-              </button>
-              <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
-            `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
-          </div>
-        </div>`;
-      }).join("")}
-    </div>`;
+    // Store conApuestas for filtering
+    window._conApuestas = conApuestas;
+    window._sinApostar = sinApostar;
+    renderListaUsuarios(users);
   } catch(e) { container.innerHTML='<div class="empty">Error al cargar usuarios: '+e.message+'</div>'; }
-  // Load invitations
   renderLinksInvitacion();
+}
+
+function renderListaUsuarios(users) {
+  const container = document.getElementById('lista-usuarios');
+  if (!container) return;
+  const conApuestas = window._conApuestas || new Set();
+  const sinApostar = window._sinApostar || [];
+
+  if (!users || !users.length) {
+    container.innerHTML = '<div class="empty"><div class="empty-ico">🔍</div>Sin resultados</div>';
+    return;
+  }
+
+  const btnRecordatorio = sinApostar.length > 0 && !document.getElementById('buscador-usuarios').value
+    ? `<div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--oro-light);">
+        <div style="font-size:13px;font-weight:600;color:var(--oro);margin-bottom:8px;">⚠️ ${sinApostar.length} usuario(s) sin apuestas</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-gold btn-sm" onclick="enviarRecordatorioMasivo()">📲 WhatsApp masivo</button>
+          <button class="btn btn-outline btn-sm" onclick="copiarListaSinApostar()">📋 Copiar lista</button>
+        </div>
+      </div>` : '';
+
+  container.innerHTML = `<div class="card" style="padding:0;overflow:hidden;">
+    ${btnRecordatorio}
+    ${users.map(u=>{
+      const ini = (u.nombre||'?').split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
+      const isMe = u.uid===currentUser.uid;
+      const tieneApuesta = conApuestas.has(u.uid);
+      const isAdmin = u.rol==="admin";
+      return `<div class="user-row">
+        <div style="width:38px;height:38px;border-radius:50%;background:${isAdmin?"var(--oro)":"var(--verde)"};color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600;font-size:14px;">${u.nombre||u.email}${isAdmin?'<span class="admin-badge">Admin</span>':''}
+            ${!tieneApuesta?'<span style="background:#fee2e2;color:var(--rojo);font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;margin-left:4px;">Sin apuestas</span>':''}
+          </div>
+          <div style="font-size:12px;color:var(--muted);">📱 ${u.celular||"—"} · ${u.email}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
+          ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
+          ${!isMe?`
+            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
+              ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
+            </button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
+          `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
