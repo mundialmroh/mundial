@@ -1166,8 +1166,9 @@ async function cargarLinkUnico() {
 
 function filtrarUsuarios(query) {
   const q = query.toLowerCase().trim();
-  if (!_cachedUsuarios) return;
-  const filtrados = !q ? _cachedUsuarios : _cachedUsuarios.filter(u =>
+  const source = window._allUsers || [];
+  if (!source.length) return;
+  const filtrados = !q ? source : source.filter(u =>
     (u.nombre||'').toLowerCase().includes(q) ||
     (u.email||'').toLowerCase().includes(q) ||
     (u.celular||'').toLowerCase().includes(q)
@@ -1193,32 +1194,25 @@ async function cargarUsuariosCache(force = false) {
   _cacheTs = Date.now();
 }
 
-async function renderUsuarios() {
+async function renderUsuarios(force = false) {
   const container = document.getElementById("lista-usuarios");
   container.innerHTML = '<div class="empty">Cargando...</div>';
   try {
-    const snap = await db.collection("usuarios").get();
-    if (snap.empty) { container.innerHTML='<div class="empty"><div class="empty-ico">👥</div>No hay usuarios</div>'; return; }
-    const users = snap.docs.map(d=>({uid:d.id,...d.data()}));
+    await cargarUsuariosCache(force);
+    const users = _cachedUsuarios.map(u => ({uid: u.id || u.uid, ...u}));
+    if (!users.length) { container.innerHTML='<div class="empty"><div class="empty-ico">👥</div>No hay usuarios</div>'; return; }
 
-    // Cargar TODAS las apuestas para calcular quiénes han apostado
-    const snapAp = await db.collection("apuestas").get();
-    const conApuestas = new Set(snapAp.docs.map(d=>d.data().uid));
+    const conApuestas = new Set((_cachedApuestasAd||[]).map(a=>a.uid));
+    const sinApostar  = users.filter(u=>!conApuestas.has(u.uid) && u.rol !== 'admin');
 
-    // Botón de recordatorio masivo
-    const sinApostar = users.filter(u=>!conApuestas.has(u.uid));
-    const btnRecordatorio = sinApostar.length > 0
-      ? `<div style="padding:12px 16px;border-bottom:1px solid var(--border);background:var(--oro-light);">
-          <div style="font-size:13px;font-weight:600;color:var(--oro);margin-bottom:8px;">⚠️ ${sinApostar.length} usuario(s) sin apuestas</div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-gold btn-sm" onclick="enviarRecordatorioMasivo()">📲 WhatsApp masivo</button>
-            <button class="btn btn-outline btn-sm" onclick="copiarListaSinApostar()">📋 Copiar lista</button>
-          </div>
-        </div>` : '';
-
-    // Store conApuestas for filtering
+    window._allUsers   = users;
     window._conApuestas = conApuestas;
-    window._sinApostar = sinApostar;
+    window._sinApostar  = sinApostar;
+
+    // Reset buscador
+    const buscador = document.getElementById('buscador-usuarios');
+    if (buscador) buscador.value = '';
+
     renderListaUsuarios(users);
   } catch(e) { container.innerHTML='<div class="empty">Error al cargar usuarios: '+e.message+'</div>'; }
   renderLinksInvitacion();
