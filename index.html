@@ -361,7 +361,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
           <div style="font-size:12px;color:rgba(255,255,255,.8);">Para registrarte necesitas un link de invitación personal. Solicítalo al administrador.</div>
         </div>
         <div id="form-login">
-          <div class="inp-wrap"><label>Correo electr&oacute;nico</label><span class="ico">&#128231;</span><input type="email" id="l-email" placeholder="tu@correo.com"/></div>
+          <div class="inp-wrap"><label>N&uacute;mero de c&eacute;dula</label><span class="ico">🪪</span><input type="text" id="l-cedula" placeholder="Ej: 71313689" inputmode="numeric"/></div>
           <div class="inp-wrap"><label>Contrase&ntilde;a</label><span class="ico">&#128274;</span><input type="password" id="l-pass" placeholder="Tu contrase&ntilde;a" onkeydown="if(event.key==='Enter')doLogin()"/></div>
           <button class="btn btn-primary" id="btn-login" onclick="doLogin()">Ingresar &rarr;</button>
           <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;" onclick="showResetPass()">&#128273; &iquest;Olvidaste tu contrase&ntilde;a?</p>
@@ -376,7 +376,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         </div>
         <div id="form-reset" style="display:none;">
           <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Te enviaremos un enlace para restablecer tu contrase&ntilde;a.</p>
-          <div class="inp-wrap"><label>Correo electr&oacute;nico</label><span class="ico">&#128231;</span><input type="email" id="reset-email" placeholder="tu@correo.com"/></div>
+          <div class="inp-wrap"><label>N&uacute;mero de c&eacute;dula</label><span class="ico">🪪</span><input type="text" id="reset-email" placeholder="Ej: 71313689" inputmode="numeric"/></div>
           <button class="btn btn-primary" id="btn-reset" onclick="doReset()">Enviar enlace &rarr;</button>
           <p style="text-align:center;margin-top:12px;font-size:13px;color:var(--muted);cursor:pointer;" onclick="authTab('login')">&larr; Volver al login</p>
         </div>

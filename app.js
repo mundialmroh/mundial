@@ -1,7 +1,8 @@
 // FIREBASE CONFIG - inicializado en el bloque de scripts del head
 
 // CONSTANTES
-const ADMIN_EMAIL        = "mundialmroh@gmail.com";
+const ADMIN_CEDULA       = "71313689";
+const ADMIN_EMAIL        = ADMIN_CEDULA + "@mroh.app";
 const API_KEY_FOOTBALL   = "ab464e64f0f64d9a97a15ed0c377de5c";
 
 // ============================================================
@@ -419,9 +420,10 @@ function clearAuthMsg(){document.getElementById("auth-err").classList.remove("sh
 function setBtnLoad(id,loading,txt){const b=document.getElementById(id);b.disabled=loading;b.textContent=loading?"⏳ Espera...":txt;}
 
 async function doLogin() {
-  const email = document.getElementById("l-email").value.trim();
-  const pass  = document.getElementById("l-pass").value;
-  if (!email||!pass) { showAuthErr("Completa todos los campos"); return; }
+  const cedula = document.getElementById("l-cedula").value.trim();
+  const pass   = document.getElementById("l-pass").value;
+  if (!cedula||!pass) { showAuthErr("Completa todos los campos"); return; }
+  const email = cedula + "@mroh.app";
   setBtnLoad("btn-login", true, "Ingresar →");
   try {
     await auth.signInWithEmailAndPassword(email, pass);
@@ -429,7 +431,7 @@ async function doLogin() {
     const msgs = {
       "auth/user-not-found":  "Correo no registrado",
       "auth/wrong-password":  "Contraseña incorrecta",
-      "auth/invalid-email":   "Correo inválido",
+      "auth/invalid-email":   "Cédula inválida",
       "auth/too-many-requests":"Demasiados intentos. Espera un momento.",
       "auth/invalid-credential": "Correo o contraseña incorrectos"
     };
@@ -492,8 +494,9 @@ async function doRegistro() {
 }
 
 async function doReset() {
-  const email = document.getElementById("reset-email").value.trim();
-  if (!email) { showAuthErr("Ingresa tu correo"); return; }
+  const cedula = document.getElementById("reset-email").value.trim();
+  if (!cedula) { showAuthErr("Ingresa tu número de cédula"); return; }
+  const email = cedula + "@mroh.app";
   setBtnLoad("btn-reset", true, "Enviar enlace →");
   try {
     await auth.sendPasswordResetEmail(email);
