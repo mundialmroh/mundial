@@ -3,7 +3,7 @@
 // CONSTANTES
 const ADMIN_CEDULA       = "71313689";
 const ADMIN_EMAIL        = ADMIN_CEDULA + "@mroh.app";
-const API_KEY_FOOTBALL   = "ab464e64f0f64d9a97a15ed0c377de5c";
+const API_KEY_FOOTBALL   = "8ccb25f8512b4cc51e437eae1b0edca7";
 
 // ============================================================
 // AUTORIZACIÓN DE DATOS
@@ -625,6 +625,11 @@ function renderDesempateApuesta(pid, local, visitante) {
 // REGISTRAR APUESTA
 async function registrar() {
   const tipo = document.getElementById("inp-tipo").value;
+  // Verificar si el usuario está eliminado
+  if (currentUser.eliminado) {
+    toast('⛔ Fuiste eliminado en la fase de grupos');
+    return;
+  }
   // Verificar si el partido está abierto
   if (tipo !== 'campeon') {
     const pid = document.getElementById("inp-partido").value;
@@ -641,14 +646,26 @@ async function registrar() {
     ts: new Date().toLocaleString("es-CO"),
     creado: firebase.firestore.FieldValue.serverTimestamp()
   };
-  if (tipo === "campeon" || tipo === "subcampeon" || tipo === "tercer_puesto") {
-    const label = tipo === "campeon" ? "campeón" : tipo === "subcampeon" ? "subcampeón" : "tercer puesto";
+  if (["campeon","subcampeon","tercer_puesto","goleador","valla"].includes(tipo)) {
+    if ((tipo==="goleador"||tipo==="valla") && !estaAbiertoEspecial(tipo)) {
+      toast("⛔ Las apuestas para " + tipo + " están cerradas");
+      return;
+    }
+    const labelMap = {campeon:"campeón",subcampeon:"subcampeón",tercer_puesto:"tercer puesto",goleador:"goleador",valla:"valla menos vencida"};
     const c = document.getElementById("inp-campeon").value.trim();
-    if (!c) { toast("⚠ Ingresa el equipo " + label); return; }
+    if (!c) { toast("⚠ Ingresa el " + (labelMap[tipo]||tipo)); return; }
     a.equipoElegido = c;
-    if (tipo === "campeon")      a.campeon     = c;
-    if (tipo === "subcampeon")   a.subcampeon  = c;
+    if (tipo === "campeon")       a.campeon      = c;
+    if (tipo === "subcampeon")    a.subcampeon   = c;
     if (tipo === "tercer_puesto") a.tercerPuesto = c;
+    if (tipo === "goleador") {
+      a.goleador = c;
+      a.golesGoleador = parseInt(document.getElementById('inp-num-especial')?.value) || 0;
+    }
+    if (tipo === "valla") {
+      a.valla = c;
+      a.golesValla = parseInt(document.getElementById('inp-num-especial')?.value) || 0;
+    }
   } else {
     const local     = document.getElementById("inp-local").value.trim();
     const visitante = document.getElementById("inp-visitante").value.trim();
@@ -674,7 +691,45 @@ async function registrar() {
     }
   }
   try {
-    await db.collection("apuestas").add(a);
+    // Verificar si ya existe una apuesta para este partido+usuario
+    if (a.partidoId && a.tipo !== 'campeon' && a.tipo !== 'subcampeon' &&
+        a.tipo !== 'tercer_puesto' && a.tipo !== 'goleador' && a.tipo !== 'valla') {
+      const existing = apuestas.find(x => x.uid === currentUser.uid && x.partidoId === a.partidoId);
+      if (existing) {
+        // Actualizar apuesta existente
+        await db.collection("apuestas").doc(existing.id).update({
+          golLocal: a.golLocal, golVisitante: a.golVisitante,
+          tarjetasLocal: a.tarjetasLocal, tarjetasVisitante: a.tarjetasVisitante,
+          esquinasLocal: a.esquinasLocal, esquinasVisitante: a.esquinasVisitante,
+          ts: new Date().toLocaleString("es-CO")
+        });
+        toast('✓ Desafío actualizado');
+        cerrarModalApuesta();
+        return;
+      }
+    }
+    // También verificar duplicados para campeón/subcampeón/etc
+    if (['campeon','subcampeon','tercer_puesto','goleador','valla'].includes(a.tipo)) {
+      const existing = apuestas.find(x => x.uid === currentUser.uid && x.tipo === a.tipo);
+      if (existing) {
+        // Solo actualizar los campos que tienen valor (evitar undefined)
+        const updateData = { equipoElegido: a.equipoElegido || '', ts: new Date().toLocaleString("es-CO") };
+        if (a.campeon      !== undefined) updateData.campeon      = a.campeon;
+        if (a.subcampeon   !== undefined) updateData.subcampeon   = a.subcampeon;
+        if (a.tercerPuesto !== undefined) updateData.tercerPuesto = a.tercerPuesto;
+        if (a.goleador     !== undefined) updateData.goleador     = a.goleador;
+        if (a.valla        !== undefined) updateData.valla        = a.valla;
+        if (a.golesGoleador!== undefined) updateData.golesGoleador= a.golesGoleador;
+        if (a.golesValla   !== undefined) updateData.golesValla   = a.golesValla;
+        await db.collection("apuestas").doc(existing.id).update(updateData);
+        toast('✓ Desafío actualizado');
+        return;
+      }
+    }
+    // Limpiar campos undefined antes de guardar
+    const aClean = {};
+    Object.keys(a).forEach(k => { if (a[k] !== undefined) aClean[k] = a[k]; });
+    await db.collection("apuestas").add(aClean);
     toast(textos.toast_apuesta_ok || '✓ Desafío registrado');
     document.getElementById("inp-partido").value  = "";
     document.getElementById("inp-local").value    = "";
@@ -705,6 +760,16 @@ function calcPuntos(a) {
     const r = resultados["tercer_puesto"];
     if (!r || !a.tercerPuesto) return 0;
     return a.tercerPuesto === r.equipo ? getPts("tercer_puesto") : 0;
+  }
+  if (a.tipo==="goleador") {
+    const r = resultados["goleador"];
+    if (!r || !a.goleador) return 0;
+    return a.goleador.toLowerCase() === r.jugador.toLowerCase() ? getPts("goleador") : 0;
+  }
+  if (a.tipo==="valla") {
+    const r = resultados["valla"];
+    if (!r || !a.valla) return 0;
+    return a.valla.toLowerCase() === r.equipo.toLowerCase() ? getPts("valla") : 0;
   }
   if (!a.partidoId || !resultados[a.partidoId]) return 0;
   const r  = resultados[a.partidoId];
@@ -753,11 +818,32 @@ function renderApuestas() {
   const grupos   = [...new Set(apuestas.filter(a=>a.grupo).map(a=>a.grupo))];
   const filP = document.getElementById("fil-persona");
   const filG = document.getElementById("fil-grupo-a");
-  const curP = filP.value, curG = filG.value;
+  const filPart = document.getElementById("fil-partido-a");
+  const curP = filP.value, curG = filG.value, curPart = filPart ? filPart.value : '';
   filP.innerHTML = '<option value="">Todos los participantes</option>'+personas.map(p=>`<option${p===curP?" selected":""}>${p}</option>`).join("");
   filG.innerHTML = '<option value="">Todos los grupos</option>'+grupos.map(g=>`<option${g===curG?" selected":""}>${g}</option>`).join("");
+  // Llenar filtro de partidos si es admin
+  if (filPart && currentUser.rol === 'admin') {
+    const partConApuestas = [...new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId))];
+    const curVal = filPart.value;
+    filPart.innerHTML = '<option value="">Todos los partidos</option>' +
+      partConApuestas.map(pid => {
+        const p = PARTIDOS.find(x=>x.id===pid);
+        const label = p ? `${p.local} vs ${p.visitante}` : pid;
+        return `<option value="${pid}"${pid===curVal?' selected':''}>${label}</option>`;
+      }).join("");
+  }
   const fT=document.getElementById("fil-tipo").value, fP=filP.value, fG2=filG.value;
-  let lista = apuestas.filter(a=>(!fT||a.tipo===fT)&&(!fP||a.nombre===fP)&&(!fG2||a.grupo===fG2));
+  const fPart = filPart ? filPart.value : '';
+  // Si ocultarApuestas está activo, usuario normal solo ve sus propias apuestas
+  const soloMias = configGlobal.ocultarApuestas && currentUser.rol !== 'admin';
+  let lista = apuestas.filter(a=>
+    (!soloMias || a.uid === currentUser.uid) &&
+    (!fT||a.tipo===fT) &&
+    (!fP||a.nombre===fP) &&
+    (!fG2||a.grupo===fG2) &&
+    (!fPart||a.partidoId===fPart)
+  );
   const container = document.getElementById("lista-apuestas");
   if (!lista.length) { container.innerHTML='<div class="empty"><div class="empty-ico">📭</div>No hay apuestas que mostrar</div>'; return; }
   container.innerHTML = lista.map(a => {
@@ -769,6 +855,8 @@ function renderApuestas() {
     if(a.tipo==="campeon")       detalle="🏆 Campeón: "+(a.campeon||a.equipoElegido||"");
     else if(a.tipo==="subcampeon")   detalle="🥈 Subcampeón: "+(a.subcampeon||a.equipoElegido||"");
     else if(a.tipo==="tercer_puesto")detalle="🥉 3er Puesto: "+(a.tercerPuesto||a.equipoElegido||"");
+    else if(a.tipo==="goleador")     detalle="⚽ Goleador: "+(a.goleador||a.equipoElegido||"")+(a.golesGoleador!==undefined?" · "+a.golesGoleador+" goles":"");
+    else if(a.tipo==="valla")        detalle="🧤 Valla: "+(a.valla||a.equipoElegido||"")+(a.golesValla!==undefined?" · "+a.golesValla+" goles en contra":"");
     else { detalle=a.local+" vs "+a.visitante+(a.grupo?" ("+a.grupo+")":""); if(a.tipo==="grupo") score=a.golLocal+"–"+a.golVisitante; }
     // Mostrar desempate solo para las propias apuestas
     const esMia = a.uid === currentUser.uid;
@@ -805,7 +893,6 @@ async function borrarApuesta(id) {
 
 // RENDER RESULTADOS
 function renderResultados() {
-  const isAdmin = currentUser && currentUser.rol === 'admin';
   const pIds  = [...new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId))];
   const lista = PARTIDOS.filter(p=>pIds.includes(p.id)||resultados[p.id]);
   const container = document.getElementById("lista-resultados");
@@ -815,83 +902,93 @@ function renderResultados() {
   let especialesHtml = '';
   if (tieneEspeciales) {
     const especiales = [
-      {id:'campeon',      label:'Campeón',      icon:'🏆', field:'campeon'},
-      {id:'subcampeon',   label:'Subcampeón',   icon:'🥈', field:'subcampeon'},
-      {id:'tercer_puesto',label:'Tercer puesto', icon:'🥉', field:'tercerPuesto'},
+      {id:'campeon',      label:'Campeón',            icon:'🏆', field:'campeon'},
+      {id:'subcampeon',   label:'Subcampeón',          icon:'🥈', field:'subcampeon'},
+      {id:'tercer_puesto',label:'Tercer puesto',       icon:'🥉', field:'tercerPuesto'},
+      {id:'goleador',     label:'Goleador fase grupos',icon:'⚽', field:'goleador', esJugador:true},
+      {id:'valla',        label:'Valla menos vencida', icon:'🧤', field:'valla'},
     ];
-    const filaEspecial = especiales.map(e => {
-      const r = resultados[e.id];
-      const n = apuestas.filter(a=>a.tipo===e.id).length;
-      if (!n) return '';
-      if (r) {
-        const btnBorrar = isAdmin ? '<button class="btn btn-outline btn-sm" onclick="borrarResultadoEspecial(&quot;'+e.id+'&quot;)">✕</button>' : '';
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
-          + '<span style="font-size:20px;">'+e.icon+'</span>'
-          + '<div style="flex:1;"><div style="font-weight:600;font-size:14px;">'+e.label+'</div>'
-          + '<div style="font-size:13px;color:var(--verde);font-weight:600;">'+r.equipo+'</div>'
-          + '<div style="font-size:11px;color:var(--muted);">'+n+' apuesta(s)</div></div>'
-          + btnBorrar + '</div>';
-      }
-      if (!isAdmin) {
-        return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
-          + '<span style="font-size:20px;">'+e.icon+'</span>'
-          + '<div style="flex:1;font-weight:600;">'+e.label+'</div>'
-          + '<span style="color:var(--muted);font-size:13px;">⏳ Pendiente</span></div>';
-      }
-      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">'
-        + '<span style="font-size:20px;">'+e.icon+'</span>'
-        + '<div style="flex:1;font-weight:600;">'+e.label+'</div>'
-        + '<input type="text" id="res-'+e.id+'" placeholder="Equipo ganador" list="lista-equipos" style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>'
-        + '<button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial(&quot;'+e.id+'&quot;)">Guardar</button></div>';
-    }).join('');
-    especialesHtml = '<div class="card" style="margin-bottom:14px;">'
-      + '<div class="card-title" style="margin-bottom:12px;">🏆 Resultados finales del mundial</div>'
-      + filaEspecial + '</div>';
+    especialesHtml = `<div class="card" style="margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:12px;">🏆 Resultados finales del mundial</div>
+      ${especiales.map(e => {
+        const r = resultados[e.id];
+        const n = apuestas.filter(a=>a.tipo===e.id).length;
+        if (!n) return '';
+        if (r) return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:20px;">${e.icon}</span>
+          <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${e.label}</div>
+          <div style="font-size:13px;color:var(--verde);font-weight:600;">${r.equipo}</div>
+          <div style="font-size:11px;color:var(--muted);">${n} apuesta(s)</div></div>
+          <button class="btn btn-outline btn-sm" onclick="borrarResultadoEspecial('${e.id}')">✕</button>
+        </div>`;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+          <span style="font-size:20px;">${e.icon}</span>
+          <div style="flex:1;font-weight:600;">${e.label}</div>
+          <input type="text" id="res-${e.id}" placeholder="Equipo ganador" list="lista-equipos"
+            style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          <button class="btn btn-primary btn-sm" onclick="guardarResultadoEspecial('${e.id}')">Guardar</button>
+        </div>`;
+      }).join('')}
+    </div>`;
   }
 
   if (!lista.length && !especialesHtml) { container.innerHTML='<div class="empty"><div class="empty-ico">⏳</div>Registra apuestas para ver partidos aquí</div>'; return; }
   container.innerHTML = especialesHtml;
   if (!lista.length) return;
-  const fechas = sortFechas([...new Set(lista.map(p=>p.fecha))]);
-  container.innerHTML += fechas.map(f => {
+  const fechas = [...new Set(lista.map(p=>p.fecha))].sort((a,b)=>FECHA_ORDER[a]-FECHA_ORDER[b]);
+  container.innerHTML = fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
-    return '<div class="fecha-bloque">'
-      + '<div class="fecha-header"><div class="fecha-badge">📅 '+f+'</div><div class="fecha-line"></div></div>'
-      + ps.map(p => {
-          const r = resultados[p.id];
-          const n = apuestas.filter(a=>a.partidoId===p.id).length;
-          const cfg = configPartidos[p.id] || {};
-          if (r) {
-            const btnBorrar = isAdmin ? '<button class="btn btn-outline btn-sm" onclick="borrarResultado(&quot;'+p.id+'&quot;)" style="margin-left:auto;">✕</button>' : '';
-            return '<div class="res-card">'
-              + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
-              + '<div class="res-form"><span style="font-weight:600;">'+p.local+'</span><div class="res-done">'+r.local+' – '+r.visitante+'</div><span style="font-weight:600;">'+p.visitante+'</span>'
-              + btnBorrar + '</div>'
-              + (cfg.tarjetas ? '<div style="font-size:12px;color:var(--muted);margin-top:4px;">🟨 Tarjetas: '+(r.tarjetasLocal||0)+'–'+(r.tarjetasVisitante||0)+'</div>' : '')
-              + (cfg.esquinas ? '<div style="font-size:12px;color:var(--muted);margin-top:2px;">🔄 Esquinas: '+(r.esquinasLocal||0)+'–'+(r.esquinasVisitante||0)+'</div>' : '')
-              + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
-          }
-          if (!isAdmin) {
-            return '<div class="res-card">'
-              + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
-              + '<div class="res-form" style="justify-content:center;color:var(--muted);font-size:13px;">⏳ Pendiente</div>'
-              + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
-          }
-          return '<div class="res-card">'
-            + '<div class="res-match">'+p.grupo+' · '+p.local+' vs '+p.visitante+'</div>'
-            + '<div class="res-form">'
-            + '<span style="font-weight:600;font-size:13px;">'+p.local+'</span>'
-            + '<input type="number" id="r-l-'+p.id+'" min="0" max="20" value="0"/>'
-            + '<span style="color:var(--muted);">vs</span>'
-            + '<input type="number" id="r-v-'+p.id+'" min="0" max="20" value="0"/>'
-            + '<span style="font-weight:600;font-size:13px;">'+p.visitante+'</span>'
-            + '<button class="btn btn-primary btn-sm" onclick="guardarResultado(&quot;'+p.id+'&quot;)" style="margin-left:auto;">Guardar</button>'
-            + '</div>'
-            + (cfg.tarjetas ? '<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;"><span style="font-size:12px;font-weight:600;color:var(--muted);">🟨 Tarjetas:</span><input type="number" id="r-tl-'+p.id+'" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/><span style="font-size:12px;color:var(--muted);">vs</span><input type="number" id="r-tv-'+p.id+'" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/></div>' : '')
-            + (cfg.esquinas ? '<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;"><span style="font-size:12px;font-weight:600;color:var(--muted);">🔄 Esquinas:</span><input type="number" id="r-el-'+p.id+'" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/><span style="font-size:12px;color:var(--muted);">vs</span><input type="number" id="r-ev-'+p.id+'" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/></div>' : '')
-            + '<div style="font-size:12px;color:var(--muted);margin-top:6px;">'+n+' apuesta(s)</div></div>';
-        }).join('') + '</div>';
-  }).join('');
+    return `<div class="fecha-bloque">
+      <div class="fecha-header"><div class="fecha-badge">📅 ${f}</div><div class="fecha-line"></div></div>
+      ${ps.map(p => {
+        const r = resultados[p.id];
+        const n = apuestas.filter(a=>a.partidoId===p.id).length;
+        const cfg = configPartidos[p.id] || {};
+        const isAdmin = currentUser && currentUser.rol === 'admin';
+        if(r) return `<div class="res-card">
+          <div class="res-match">${p.grupo} · ${p.local} vs ${p.visitante}</div>
+          <div class="res-form"><span style="font-weight:600;">${p.local}</span><div class="res-done">${r.local} – ${r.visitante}</div><span style="font-weight:600;">${p.visitante}</span>
+          ${isAdmin ? `<button class="btn btn-outline btn-sm" onclick="borrarResultado('${p.id}')" style="margin-left:auto;">✕</button>` : ''}</div>
+          ${isAdmin && cfg.tarjetas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:var(--muted);">🟨 Tarjetas:</span>
+            <input type="number" id="r-tl-${p.id}" min="0" max="20" value="${r.tarjetasLocal??0}" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <span style="font-size:12px;color:var(--muted);">vs</span>
+            <input type="number" id="r-tv-${p.id}" min="0" max="20" value="${r.tarjetasVisitante??0}" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <button class="btn btn-sm btn-primary" onclick="guardarDesempate('${p.id}')" style="padding:4px 10px;font-size:11px;">Guardar</button>
+          </div>` : (!isAdmin && cfg.tarjetas ? `<div style="font-size:12px;color:var(--muted);margin-top:4px;">🟨 Tarjetas: ${r.tarjetasLocal||0}–${r.tarjetasVisitante||0}</div>` : '')}
+          ${isAdmin && cfg.esquinas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:var(--muted);">🔄 Esquinas:</span>
+            <input type="number" id="r-el-${p.id}" min="0" max="30" value="${r.esquinasLocal??0}" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <span style="font-size:12px;color:var(--muted);">vs</span>
+            <input type="number" id="r-ev-${p.id}" min="0" max="30" value="${r.esquinasVisitante??0}" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <button class="btn btn-sm btn-primary" onclick="guardarDesempate('${p.id}')" style="padding:4px 10px;font-size:11px;">Guardar</button>
+          </div>` : (!isAdmin && cfg.esquinas ? `<div style="font-size:12px;color:var(--muted);margin-top:2px;">🔄 Esquinas: ${r.esquinasLocal||0}–${r.esquinasVisitante||0}</div>` : '')}
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">${n} apuesta(s)</div></div>`;
+        return `<div class="res-card">
+          <div class="res-match">${p.grupo} · ${p.local} vs ${p.visitante}</div>
+          ${isAdmin ? `<div class="res-form">
+            <span style="font-weight:600;font-size:13px;">${p.local}</span>
+            <input type="number" id="r-l-${p.id}" min="0" max="20" value="0"/>
+            <span style="color:var(--muted);">vs</span>
+            <input type="number" id="r-v-${p.id}" min="0" max="20" value="0"/>
+            <span style="font-weight:600;font-size:13px;">${p.visitante}</span>
+            <button class="btn btn-primary btn-sm" onclick="guardarResultado('${p.id}')" style="margin-left:auto;">Guardar</button>
+          </div>` : `<div class="res-form"><span style="font-weight:600;font-size:13px;">${p.local}</span><div style="color:var(--muted);margin:0 8px;">Sin resultado aún</div><span style="font-weight:600;font-size:13px;">${p.visitante}</span></div>`}
+          ${cfg.tarjetas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:var(--muted);">🟨 Tarjetas:</span>
+            <input type="number" id="r-tl-${p.id}" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <span style="font-size:12px;color:var(--muted);">vs</span>
+            <input type="number" id="r-tv-${p.id}" min="0" max="20" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+          </div>` : ''}
+          ${cfg.esquinas ? `<div style="display:flex;align-items:center;gap:8px;margin-top:6px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:600;color:var(--muted);">🔄 Esquinas:</span>
+            <input type="number" id="r-el-${p.id}" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+            <span style="font-size:12px;color:var(--muted);">vs</span>
+            <input type="number" id="r-ev-${p.id}" min="0" max="30" value="0" style="width:50px;text-align:center;padding:4px;font-size:13px;font-weight:600;border:1px solid var(--border);border-radius:6px;"/>
+          </div>` : ''}
+          <div style="font-size:12px;color:var(--muted);margin-top:6px;">${n} apuesta(s)</div></div>`;
+      }).join("")}</div>`;
+  }).join("");
 }
 
 async function guardarResultado(pid) {
@@ -930,29 +1027,147 @@ async function borrarResultado(pid) {
 
 // Cargar resultados de Firestore al iniciar
 async function cargarResultados() {
-  const snap = await db.collection("resultados").get();
-  snap.forEach(doc => { resultados[doc.id] = doc.data(); });
-  await cargarConfigPartidos();
-  await cargarTextos();
-  await cargarCriterios();
+  // Cargar todo en paralelo para mayor velocidad
+  const [snapRes] = await Promise.all([
+    db.collection("resultados").get(),
+    cargarConfigPartidos(),
+    cargarTextos(),
+    cargarCriterios()
+  ]);
+  snapRes.forEach(doc => { resultados[doc.id] = doc.data(); });
+  // Estas dependen de datos cargados arriba
+  await Promise.all([verificarEliminacion(), checkEliminadoActual()]);
+  appReady = true;
   renderPartidos(); renderResultados();
 }
 
 // RENDER TABLA
-function renderTabla() {
-  // usa apuestas ya en memoria — no hace fetch adicional
+async function renderTabla() {
   document.getElementById("st-total").textContent    = apuestas.length;
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   document.getElementById("st-partic").textContent   = personas.length;
   document.getElementById("st-partidos").textContent = new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId)).size;
+
   const container = document.getElementById("tabla-ranking");
-  if (!personas.length) { container.innerHTML='<div class="empty" style="padding:24px">Sin participantes aún</div>'; return; }
-  const ranking = personas.map(p => {
-    const bets = apuestas.filter(a=>a.nombre===p);
-    const fases = calcPuntosPorFase(bets);
-    const total = bets.reduce((s,a)=>s+calcPuntos(a),0);
-    return {nombre:p, pts:total, count:bets.length, fases, ini:p.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()};
-  }).sort((a,b)=>b.pts-a.pts||b.count-a.count);
+  container.innerHTML = '<div class="empty" style="padding:24px">Cargando...</div>';
+
+  // apuestas ya contiene todas (suscribirApuestas carga sin filtro)
+  const esAdmin = currentUser.rol === 'admin';
+
+  // Filtro por partido (solo admin)
+  const filtroDiv = document.getElementById('filtro-tabla-partido');
+  const selPartido = document.getElementById('sel-filtro-tabla-partido');
+  if (filtroDiv) filtroDiv.style.display = esAdmin ? 'block' : 'none';
+  if (esAdmin && selPartido) {
+    // Llenar opciones con partidos que tienen resultado
+    const partidosConRes = Object.keys(resultados).filter(pid => PARTIDOS.find(p=>p.id===pid));
+    const valActual = selPartido.value;
+    selPartido.innerHTML = '<option value="">🏆 Ranking general</option>' +
+      partidosConRes.map(pid => {
+        const p = PARTIDOS.find(x=>x.id===pid);
+        const label = p ? `${p.local} vs ${p.visitante}` : pid;
+        return `<option value="${pid}"${pid===valActual?' selected':''}>${label}</option>`;
+      }).join('');
+    if (valActual && partidosConRes.includes(valActual)) selPartido.value = valActual;
+  }
+  const filtroPartido = esAdmin && selPartido ? selPartido.value : '';
+  let todosUsuarios = [];
+  try {
+    if (esAdmin) {
+      todosUsuarios = await getUsuarios();
+      const total     = todosUsuarios.length;
+      const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
+      const asociados = total - invitados;
+      const stReg = document.getElementById('st-registrados');
+      const stInv = document.getElementById('st-invitados');
+      const stAso = document.getElementById('st-asociados');
+      if (stReg) stReg.textContent = total;
+      if (stInv) stInv.textContent = invitados;
+      if (stAso) stAso.textContent = asociados;
+      document.getElementById("st-partic").textContent = total;
+    } else {
+      // Usar cache de apuestas para tabla (cargado al abrir pestaña)
+      const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
+      const vistos = new Map();
+      fuente.forEach(a => {
+        if (a.uid && a.nombre && !vistos.has(a.uid))
+          vistos.set(a.uid, { uid: a.uid, nombre: a.nombre, rol: 'user' });
+      });
+      todosUsuarios = [...vistos.values()];
+    }
+  } catch(e) { console.error('Error cargando tabla:', e); }
+
+  // Partido más cercano con desempate habilitado (tarjetas o esquinas)
+  const partidosConDesempate = Object.entries(configPartidos)
+    .filter(([,c]) => c.tarjetas || c.esquinas)
+    .map(([id]) => id);
+  const hayDesempate = partidosConDesempate.length > 0;
+  // Ordenar por posición en PARTIDOS (orden cronológico del fixture)
+  const partidoDesempate = hayDesempate
+    ? partidosConDesempate.sort((a,b) => {
+        const ia = PARTIDOS.findIndex(p=>p.id===a);
+        const ib = PARTIDOS.findIndex(p=>p.id===b);
+        return ia - ib;
+      })[0]
+    : null;
+
+  // Construir ranking con todos los usuarios
+  const ranking = todosUsuarios
+    .filter(u => u.rol !== 'admin')
+    .map(u => {
+      // Si hay filtro de partido, solo contar puntos de ese partido
+      const fuenteApuestas = esAdmin ? apuestas : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
+      const bets = filtroPartido
+        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido)
+        : fuenteApuestas.filter(a => a.uid === u.uid);
+      const fases = filtroPartido ? {} : calcPuntosPorFase(bets);
+      const total = bets.reduce((s,a) => s+calcPuntos(a), 0);
+      const nombre = u.nombre || u.email;
+      // Desempate por partido filtrado
+      let desFiltro = { tarjetas: 0, esquinas: 0 };
+      if (filtroPartido) {
+        const apFiltro = bets[0];
+        const resFiltro = resultados[filtroPartido] || {};
+        const cfgFiltro = configPartidos[filtroPartido] || {};
+        if (apFiltro && cfgFiltro.tarjetas && resFiltro.tarjetasLocal !== undefined) {
+          if (Number(apFiltro.tarjetasLocal) === Number(resFiltro.tarjetasLocal) &&
+              Number(apFiltro.tarjetasVisitante) === Number(resFiltro.tarjetasVisitante))
+            desFiltro.tarjetas = 1;
+        }
+        if (apFiltro && cfgFiltro.esquinas && resFiltro.esquinasLocal !== undefined) {
+          if (Number(apFiltro.esquinasLocal) === Number(resFiltro.esquinasLocal) &&
+              Number(apFiltro.esquinasVisitante) === Number(resFiltro.esquinasVisitante))
+            desFiltro.esquinas = 1;
+        }
+      }
+
+      // Desempate: solo el partido más cercano con desempate activo
+      const desempate = {};
+      if (currentUser.rol === 'admin' && partidoDesempate) {
+        const pid = partidoDesempate;
+        const apuesta = bets.find(a => a.partidoId === pid);
+        const p = PARTIDOS.find(x => x.id === pid);
+        const label = p ? `${p.local} vs ${p.visitante}` : pid;
+        const cfg = configPartidos[pid] || {};
+        desempate[pid] = { label, tarjetas: cfg.tarjetas, esquinas: cfg.esquinas,
+          tl: apuesta?.tarjetasLocal, tv: apuesta?.tarjetasVisitante,
+          el: apuesta?.esquinasLocal, ev: apuesta?.esquinasVisitante };
+      }
+
+      return { nombre, pts: total, count: bets.length, fases, desempate,
+               ini: nombre.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase(),
+               desFiltroTarjetas: desFiltro.tarjetas, desFiltroEsquinas: desFiltro.esquinas };
+    })
+    .sort((a,b) => {
+      if (b.pts !== a.pts) return b.pts - a.pts;
+      if (filtroPartido) {
+        if (b.desFiltroTarjetas !== a.desFiltroTarjetas) return b.desFiltroTarjetas - a.desFiltroTarjetas;
+        if (b.desFiltroEsquinas !== a.desFiltroEsquinas) return b.desFiltroEsquinas - a.desFiltroEsquinas;
+      }
+      return b.count - a.count;
+    });
+
+  if (!ranking.length) { container.innerHTML='<div class="empty" style="padding:24px">Sin participantes aún</div>'; return; }
   const colors = ["var(--oro)","#adb5bd","#cd7f32"];
   container.innerHTML = ranking.map((r,i) => {
     const faseBadges = Object.entries(r.fases)
@@ -962,6 +1177,35 @@ function renderTabla() {
         const icons  = {grupos:'⚽',octavos:'🔁',cuartos:'🏅',semis:'🌟',final:'🏆',campeon:'👑'};
         return `<span style="font-size:10px;background:var(--verde-light);color:var(--verde);padding:2px 7px;border-radius:8px;margin-right:3px;">${icons[k]||''} ${labels[k]||k}: <strong>${v}</strong></span>`;
       }).join('');
+
+    // Badges de desempate — solo admin
+    let desempateBadges = '';
+    if (currentUser.rol === 'admin') {
+      // Si hay filtro de partido activo, mostrar desempate de ese partido
+      const pidsBadge = filtroPartido ? [filtroPartido] : Object.keys(r.desempate);
+      pidsBadge.forEach(pid => {
+        const cfg = configPartidos[pid] || {};
+        const res = resultados[pid] || {};
+        const apFiltro = apuestas.find(a => a.uid === (apuestas.find(x=>x.nombre===r.nombre)?.uid) && a.partidoId === pid);
+        const d = r.desempate[pid] || {
+          tarjetas: cfg.tarjetas, esquinas: cfg.esquinas,
+          tl: apFiltro?.tarjetasLocal, tv: apFiltro?.tarjetasVisitante,
+          el: apFiltro?.esquinasLocal, ev: apFiltro?.esquinasVisitante,
+          label: (() => { const p=PARTIDOS.find(x=>x.id===pid); return p?`${p.local} vs ${p.visitante}`:pid; })()
+        };
+        if (d.tarjetas) {
+          const tl = d.tl ?? '?', tv = d.tv ?? '?';
+          const acerto = res.tarjetasLocal !== undefined && Number(d.tl) === Number(res.tarjetasLocal) && Number(d.tv) === Number(res.tarjetasVisitante);
+          desempateBadges += `<span title="🟨 Tarjetas en ${d.label}" style="font-size:10px;background:${acerto?'#d4edd9':'#fdf3dc'};color:${acerto?'#1a6b3c':'#c8972b'};padding:2px 7px;border-radius:8px;margin-right:3px;">🟨 ${tl}–${tv}</span>`;
+        }
+        if (d.esquinas) {
+          const el = d.el ?? '?', ev = d.ev ?? '?';
+          const acerto = res.esquinasLocal !== undefined && Number(d.el) === Number(res.esquinasLocal) && Number(d.ev) === Number(res.esquinasVisitante);
+          desempateBadges += `<span title="🔄 Esquinas en ${d.label}" style="font-size:10px;background:${acerto?'#d4edd9':'#e8eef7'};color:${acerto?'#1a6b3c':'var(--verde)'};padding:2px 7px;border-radius:8px;margin-right:3px;">🔄 ${el}–${ev}</span>`;
+        }
+      });
+    }
+
     return `<div class="rank-row" style="flex-wrap:wrap;">
       <div class="rank-pos${i<3?" top":""}">${i+1}</div>
       <div style="width:38px;height:38px;border-radius:50%;background:${colors[i]||"var(--verde)"};color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${r.ini}</div>
@@ -969,6 +1213,7 @@ function renderTabla() {
         ${i===0?"🥇 ":i===1?"🥈 ":i===2?"🥉 ":""}${r.nombre}
         <div class="rank-sub">${r.count} apuesta${r.count!==1?"s":""}</div>
         ${faseBadges ? `<div style="margin-top:5px;flex-wrap:wrap;display:flex;gap:3px;">${faseBadges}</div>` : ''}
+        ${desempateBadges ? `<div style="margin-top:4px;display:flex;flex-wrap:wrap;gap:3px;">${desempateBadges}</div>` : ''}
       </div>
       <div><div class="rank-pts">${r.pts}</div><div class="pts-lbl">puntos</div></div>
     </div>`;
@@ -1348,29 +1593,43 @@ function showSyncMsg(msg,tipo){
 async function syncResultados() {
   const btn=document.getElementById("btn-sync");
   btn.disabled=true;btn.textContent="⏳ Sincronizando...";
-  showSyncMsg("Consultando API-Football...","info");
+  showSyncMsg("Consultando worldcup26.ir...","info");
   try {
-    const res = await fetch(`https://v3.football.api-sports.io/fixtures?league=1&season=2026&status=FT`,{
-      headers:{"x-apisports-key":API_KEY_FOOTBALL}
-    });
+    const res = await fetch('https://worldcup26.ir/get/games');
     const data = await res.json();
-    if(!data.response||!data.response.length){showSyncMsg("⚠ No hay partidos finalizados aún","info");btn.disabled=false;btn.textContent="🔄 Sincronizar API";return;}
+    const games = data.games || [];
+    const terminados = games.filter(g => g.finished === 'TRUE' && g.home_score !== null && g.away_score !== null);
+    if(!terminados.length){showSyncMsg("⚠ No hay partidos finalizados aún","info");btn.disabled=false;btn.textContent="🔄 Sincronizar API";return;}
     let actualizados=0;
     const batch = db.batch();
-    data.response.forEach(f=>{
-      const partido=PARTIDOS.find(p=>{const lm=TEAM_MAP[p.local]||p.local,vm=TEAM_MAP[p.visitante]||p.visitante;return(lm===f.teams.home.name&&vm===f.teams.away.name)||(lm===f.teams.away.name&&vm===f.teams.home.name);});
-      if(partido&&f.goals.home!==null){
-        const lm=TEAM_MAP[partido.local]||partido.local;
-        const r=lm===f.teams.home.name?{local:f.goals.home,visitante:f.goals.away}:{local:f.goals.away,visitante:f.goals.home};
-        resultados[partido.id]=r;
-        batch.set(db.collection("resultados").doc(partido.id),{...r,ts:firebase.firestore.FieldValue.serverTimestamp()});
-        actualizados++;
-      }
+    terminados.forEach(g => {
+      // Buscar partido por nombre de equipo (en inglés)
+      const partido = PARTIDOS.find(p => {
+        const lm = TEAM_MAP[p.local]    || p.local;
+        const vm = TEAM_MAP[p.visitante] || p.visitante;
+        return (lm === g.home_team_name_en && vm === g.away_team_name_en) ||
+               (lm === g.away_team_name_en && vm === g.home_team_name_en);
+      });
+      if (!partido) return;
+      const lm = TEAM_MAP[partido.local] || partido.local;
+      const esLocal = lm === g.home_team_name_en;
+      const r = {
+        local:     esLocal ? parseInt(g.home_score) : parseInt(g.away_score),
+        visitante: esLocal ? parseInt(g.away_score) : parseInt(g.home_score),
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      // Usar merge:true para no sobreescribir tarjetas/esquinas guardadas manualmente
+      resultados[partido.id] = { ...(resultados[partido.id]||{}), ...r };
+      batch.set(db.collection("resultados").doc(partido.id), r, { merge: true });
+      actualizados++;
     });
     await batch.commit();
     // Recalcular puntos
-    const batchPts=db.batch();
-    apuestas.forEach(a=>{if(a.partidoId&&resultados[a.partidoId])batchPts.update(db.collection("apuestas").doc(a.id),{puntos:calcPuntos(a)});});
+    const batchPts = db.batch();
+    apuestas.forEach(a => {
+      if (a.partidoId && resultados[a.partidoId])
+        batchPts.update(db.collection("apuestas").doc(a.id), {puntos: calcPuntos(a)});
+    });
     await batchPts.commit();
     showSyncMsg(`✓ ${actualizados} partido(s) actualizado(s)`,"ok");
     toast(`✓ ${actualizados} resultado(s) sincronizados`);
@@ -2305,6 +2564,389 @@ async function guardarApuestaModal(pid) {
     }
     cerrarModalApuesta();
   } catch(e) { toast('❌ Error: ' + e.message); }
+}
+
+
+
+// ============================================================
+// FUNCIONES ADICIONALES (FEES)
+// ============================================================
+
+
+async function verificarEliminacion() {
+  // Si ya se ejecutó la eliminación, no volver a ejecutar
+  if (configGlobal.eliminacionEjecutada) return;
+
+  // Usar fechaEliminacion separada del cierre de apuestas
+  const fechaElim = configGlobal.fechaEliminacion;
+  if (!fechaElim) return; // Solo ejecutar si el admin define esta fecha explícitamente
+  if (new Date(fechaElim) > new Date()) return;
+
+  // Calcular ranking actual
+  const snapUsers = await db.collection('usuarios').get();
+  const snapApuestas = await db.collection('apuestas').get();
+  const todasApuestas = snapApuestas.docs.map(d=>({id:d.id,...d.data()}));
+
+  const usuarios = snapUsers.docs.map(d=>({uid:d.id,...d.data()}))
+    .filter(u => u.rol !== 'admin');
+
+  const ranking = usuarios.map(u => {
+    const bets = todasApuestas.filter(a => a.uid === u.uid);
+    const pts  = bets.reduce((s,a) => s + (calcPuntosGrupos(a)||0), 0);
+    return { uid: u.uid, nombre: u.nombre, pts };
+  }).sort((a,b) => b.pts - a.pts);
+
+  // Eliminar el % configurado por el admin (default 30%)
+  const pctElim = (configGlobal.pctEliminacion || 30) / 100;
+  const totalEliminar = Math.floor(ranking.length * pctElim);
+  if (totalEliminar === 0) return;
+
+  const eliminados = ranking.slice(ranking.length - totalEliminar);
+  const batch = db.batch();
+  eliminados.forEach(u => {
+    batch.update(db.collection('usuarios').doc(u.uid), {
+      eliminado: true,
+      eliminadoFase: 'grupos',
+      ptsGrupos: u.pts
+    });
+  });
+  // Marcar eliminación como ejecutada
+  await batch.commit();
+  await db.collection('config').doc('global').set(
+    { eliminacionEjecutada: true, eliminados: eliminados.map(u=>u.uid) },
+    { merge: true }
+  );
+  console.log('Eliminación ejecutada:', eliminados.length, 'usuarios');
+}
+
+
+function calcPuntosGrupos(a) {
+  // Solo cuenta partidos de fase de grupos
+  if (!a.partidoId) return 0;
+  const letra = a.partidoId[0];
+  const grupos = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+  if (!grupos.includes(letra)) return 0;
+  return calcPuntos(a);
+}
+
+
+async function reiniciarPuntosOctavos() {
+  if (!confirm('¿Reiniciar puntos para octavos? Todos los participantes activos comenzarán en 0. Esta acción no se puede deshacer.')) return;
+
+  // Guardar puntos de grupos y resetear
+  const snapApuestas = await db.collection('apuestas').get();
+  const batch = db.batch();
+
+  snapApuestas.docs.forEach(doc => {
+    const a = doc.data();
+    // Guardar puntos de grupos
+    if (a.puntos > 0) {
+      batch.update(db.collection('apuestas').doc(doc.id), {
+        puntosGrupos: a.puntos,
+        puntos: 0
+      });
+    }
+  });
+  await batch.commit();
+
+  // Marcar reinicio en config
+  await db.collection('config').doc('global').set(
+    { reinicioOctavos: true, fechaReinicio: firebase.firestore.FieldValue.serverTimestamp() },
+    { merge: true }
+  );
+
+  toast('✓ Puntos reiniciados para octavos');
+  renderTabla(); renderApuestas();
+}
+
+
+async function checkEliminadoActual() {
+  if (!currentUser || currentUser.rol === 'admin') return;
+  const snap = await db.collection('usuarios').doc(currentUser.uid).get();
+  if (snap.exists && snap.data().eliminado) {
+    currentUser.eliminado = true;
+    // Mostrar banner de eliminación
+    const banner = document.getElementById('banner-eliminado');
+    if (banner) banner.style.display = 'block';
+    // Deshabilitar registro de apuestas
+    const btnReg = document.getElementById('btn-registrar');
+    if (btnReg) { btnReg.disabled = true; btnReg.textContent = '⛔ Eliminado en fase de grupos'; }
+  }
+}
+
+
+async function recalcularTodosPuntos() {
+  if (!confirm('¿Recalcular puntos de todas las apuestas? Esto puede tardar unos segundos.')) return;
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = '⏳ Recalculando...';
+  try {
+    const snap = await db.collection('apuestas').get();
+    const batch = db.batch();
+    let actualizadas = 0;
+    snap.docs.forEach(doc => {
+      const a = {id: doc.id, ...doc.data()};
+      const pts = calcPuntos(a);
+      batch.update(doc.ref, { puntos: pts });
+      actualizadas++;
+    });
+    await batch.commit();
+    toast('✓ ' + actualizadas + ' apuestas recalculadas');
+    renderTabla(); renderApuestas();
+  } catch(e) { toast('❌ Error: ' + e.message); }
+  btn.disabled = false; btn.textContent = '🔄 Recalcular puntos';
+}
+
+
+async function exportXLSX(){
+  if(!apuestas.length){toast("No hay apuestas");return;}
+
+  const wb = XLSX.utils.book_new();
+
+  // ── Hoja 1: Apuestas detalladas ──
+  const hdApuestas = ["#","Participante","Tipo","Partido","Goles Local","Goles Visitante",
+    "Campeón/Jugador","Grupo","Fecha registro","Puntos","Tarjetas Local","Tarjetas Visit.","Esquinas Local","Esquinas Visit."];
+  const rowsApuestas = apuestas
+    .sort((a,b) => a.nombre.localeCompare(b.nombre))
+    .map((a,i) => [
+      i+1, a.nombre, a.tipo,
+      a.local ? a.local+' vs '+a.visitante : '',
+      a.golLocal ?? '', a.golVisitante ?? '',
+      a.campeon || a.subcampeon || a.tercerPuesto || a.goleador || a.valla || '',
+      a.grupo || '', a.ts, calcPuntos(a),
+      a.tarjetasLocal ?? '', a.tarjetasVisitante ?? '',
+      a.esquinasLocal ?? '', a.esquinasVisitante ?? ''
+    ]);
+  const wsApuestas = XLSX.utils.aoa_to_sheet([hdApuestas, ...rowsApuestas]);
+  wsApuestas['!cols'] = [4,20,14,28,8,8,16,10,18,8,10,10,10,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsApuestas, "Apuestas");
+
+  // ── Hoja 2: Tabla de posiciones ──
+  const personas = [...new Set(apuestas.map(a=>a.nombre))];
+  const ranking = personas.map(p => {
+    const bets = apuestas.filter(a=>a.nombre===p);
+    const fases = calcPuntosPorFase(bets);
+    return { nombre:p, total:bets.reduce((s,a)=>s+calcPuntos(a),0), count:bets.length, ...fases };
+  }).sort((a,b)=>b.total-a.total);
+  const hdRank = ["Pos","Participante","Apuestas","Total Pts","Pts Grupos","Pts Octavos","Pts Cuartos","Pts Semis","Pts Final","Pts Campeón"];
+  const rowsRank = ranking.map((r,i)=>[i+1,r.nombre,r.count,r.total,r.grupos||0,r.octavos||0,r.cuartos||0,r.semis||0,r.final||0,r.campeon||0]);
+  const wsRank = XLSX.utils.aoa_to_sheet([hdRank, ...rowsRank]);
+  wsRank['!cols'] = [4,24,8,10,10,10,10,10,10,10].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb, wsRank, "Posiciones");
+
+  // ── Hoja 3: Usuarios registrados ──
+  try {
+    const snapUsers = await getUsuarios();
+    const hdUsers = ["#","Nombre","Correo","Celular","Rol","Tipo","Apuestas","Puntos"];
+    const rowsUsers = snapUsers.map((u,i) => {
+      const bets = apuestas.filter(a=>a.uid===u.uid);
+      const pts  = bets.reduce((s,a)=>s+calcPuntos(a),0);
+      const tipo = u.invitadoPor ? 'Invitado' : 'Asociado';
+      return [i+1, u.nombre, u.email, u.celular||'', u.rol, tipo, bets.length, pts];
+    });
+    const wsUsers = XLSX.utils.aoa_to_sheet([hdUsers, ...rowsUsers]);
+    wsUsers['!cols'] = [4,24,28,14,8,10,8,8].map(w=>({wch:w}));
+    XLSX.utils.book_append_sheet(wb, wsUsers, "Usuarios");
+  } catch(e) { console.error('Error cargando usuarios:', e); }
+
+  XLSX.writeFile(wb, "desafio_mundialista_fees_2026.xlsx");
+  toast("✓ Excel exportado con 3 hojas");
+}
+
+
+function renderApuestasPorUsuario() {
+  const container = document.getElementById('lista-apuestas-por-usuario');
+  if (!container) return;
+  const filtroNombre = (document.getElementById('filtro-usr-nombre')?.value || '').toLowerCase();
+  const filtroTipo   = document.getElementById('filtro-usr-tipo')?.value || '';
+  // Toggle global
+  const globalAbierto = configGlobal.apuestasAbiertas;
+  const toggleGlobal = document.getElementById('toggle-apertura-global');
+  if (toggleGlobal) {
+    toggleGlobal.textContent = globalAbierto ? '🔓 Apuestas abiertas (cerrar todo)' : '🔒 Apuestas cerradas (abrir todo)';
+    toggleGlobal.style.background = globalAbierto ? '#e8f7ed' : '#fef0f0';
+    toggleGlobal.style.color = globalAbierto ? '#1a6b3c' : '#dc2626';
+    toggleGlobal.style.borderColor = globalAbierto ? '#a3d9b8' : '#fecaca';
+  }
+
+  // Agrupar apuestas por usuario
+  const porUsuario = new Map();
+  apuestas.forEach(a => {
+    if (!a.uid || !a.nombre) return;
+    if (filtroTipo && a.tipo !== filtroTipo) return;
+    if (!porUsuario.has(a.uid)) porUsuario.set(a.uid, { nombre: a.nombre, bets: [] });
+    porUsuario.get(a.uid).bets.push(a);
+  });
+
+  // Filtrar por nombre
+  const usuarios = [...porUsuario.values()]
+    .filter(u => !filtroNombre || u.nombre.toLowerCase().includes(filtroNombre))
+    .sort((a,b) => a.nombre.localeCompare(b.nombre));
+
+  if (!usuarios.length) {
+    container.innerHTML = '<div class="empty" style="padding:24px;">Sin resultados</div>';
+    return;
+  }
+
+  container.innerHTML = usuarios.map(u => {
+    const pts = u.bets.reduce((s,a) => s + calcPuntos(a), 0);
+    const ini = u.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+
+    const baldosas = u.bets.map(a => {
+      const p = calcPuntos(a);
+      const res = resultados[a.partidoId] || {};
+      const tieneResultado = a.partidoId && res.local !== undefined;
+      const acerto = p > 0;
+      let titulo = '', detalle = '', desempateHtml = '';
+
+      if (a.tipo === 'grupo') {
+        const partido = PARTIDOS.find(x => x.id === a.partidoId);
+        titulo = partido ? `${partido.local} vs ${partido.visitante}` : (a.local + ' vs ' + a.visitante);
+        detalle = `${a.golLocal ?? '?'} – ${a.golVisitante ?? '?'}`;
+        if (tieneResultado) detalle += ` <span style="color:var(--muted);font-size:10px;">(${res.local}-${res.visitante})</span>`;
+        // Desempate
+        if (a.tarjetasLocal !== undefined)
+          desempateHtml += `<span style="font-size:10px;background:#fdf3dc;color:#c8972b;padding:1px 5px;border-radius:6px;margin-right:3px;">🟨 ${a.tarjetasLocal}–${a.tarjetasVisitante}</span>`;
+        if (a.esquinasLocal !== undefined)
+          desempateHtml += `<span style="font-size:10px;background:#e8eef7;color:var(--verde);padding:1px 5px;border-radius:6px;">🔄 ${a.esquinasLocal}–${a.esquinasVisitante}</span>`;
+      } else if (a.tipo === 'campeon')       { titulo = '🏆 Campeón';    detalle = a.campeon || a.equipoElegido || '—'; }
+      else if (a.tipo === 'subcampeon')      { titulo = '🥈 Subcampeón'; detalle = a.subcampeon || a.equipoElegido || '—'; }
+      else if (a.tipo === 'tercer_puesto')   { titulo = '🥉 3er Puesto'; detalle = a.tercerPuesto || a.equipoElegido || '—'; }
+      else if (a.tipo === 'goleador')        { titulo = '⚽ Goleador';   detalle = (a.goleador || a.equipoElegido || '—') + (a.golesGoleador !== undefined ? ` (${a.golesGoleador}g)` : ''); }
+      else if (a.tipo === 'valla')           { titulo = '🧤 Valla';      detalle = (a.valla || a.equipoElegido || '—') + (a.golesValla !== undefined ? ` (${a.golesValla}g)` : ''); }
+
+      const bg = tieneResultado ? (acerto ? '#e8f7ed' : '#fef0f0') : 'var(--bg)';
+      const border = tieneResultado ? (acerto ? '#a3d9b8' : '#fecaca') : 'var(--border)';
+      return `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:8px 10px;min-width:110px;max-width:140px;flex:0 0 auto;">
+        <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${titulo}">${titulo}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--verde);">${detalle}</div>
+        ${desempateHtml ? `<div style="margin-top:4px;">${desempateHtml}</div>` : ''}
+        ${p > 0 ? `<div style="font-size:10px;color:#1a6b3c;font-weight:700;margin-top:4px;">+${p} pts</div>` : ''}
+      </div>`;
+    }).join('');
+
+    return `<div style="border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <div style="width:36px;height:36px;border-radius:50%;background:var(--verde);color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${ini}</div>
+        <div style="flex:1;font-weight:600;font-size:14px;">${u.nombre}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--verde);margin-right:6px;">${pts} pts</div>
+        <button onclick="toggleAperturaUsuario('${u.uid}','${u.nombre.replace(/'/g,"\'")}')" 
+          style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--border);cursor:pointer;background:var(--bg);color:var(--muted);" 
+          title="Abrir/cerrar apuestas para este usuario">🔓/🔒</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">${baldosas}</div>
+    </div>`;
+  }).join('');
+}
+
+
+async function toggleAperturaGlobal() {
+  const abierto = configGlobal.apuestasAbiertas;
+  await db.collection('config').doc('global').update({ apuestasAbiertas: !abierto });
+  configGlobal.apuestasAbiertas = !abierto;
+  toast(abierto ? '🔒 Apuestas cerradas globalmente' : '🔓 Apuestas abiertas globalmente');
+  renderApuestasPorUsuario();
+}
+
+
+async function toggleAperturaUsuario(uid, nombre) {
+  const snap = await db.collection('usuarios').doc(uid).get();
+  const actual = snap.data()?.apuestasAbiertas || false;
+  await db.collection('usuarios').doc(uid).update({ apuestasAbiertas: !actual });
+  toast(!actual ? `🔓 Apuestas abiertas para ${nombre}` : `🔒 Apuestas cerradas para ${nombre}`);
+  renderApuestasPorUsuario();
+}
+
+
+async function savePctEliminacion() {
+  const pct = parseInt(document.getElementById('pct-eliminacion')?.value || '30');
+  await db.collection('config').doc('global').set({ pctEliminacion: pct }, { merge: true });
+  toast('✓ Porcentaje guardado: ' + pct + '%');
+}
+
+async function saveFechaEliminacion() {
+  const fecha = document.getElementById('fecha-eliminacion')?.value || '';
+  const pct   = parseInt(document.getElementById('pct-eliminacion')?.value || '30');
+  configGlobal.fechaEliminacion = fecha;
+  await db.collection('config').doc('global').set({ fechaEliminacion: fecha, pctEliminacion: pct }, { merge: true });
+  toast('✓ Fecha de eliminación guardada');
+}
+
+
+async function guardarDesempate(pid) {
+  if (!currentUser || currentUser.rol !== 'admin') return;
+  const cfg = configPartidos[pid] || {};
+  const update = { ts: firebase.firestore.FieldValue.serverTimestamp() };
+  if (cfg.tarjetas) {
+    update.tarjetasLocal     = parseInt(document.getElementById("r-tl-"+pid)?.value)||0;
+    update.tarjetasVisitante = parseInt(document.getElementById("r-tv-"+pid)?.value)||0;
+  }
+  if (cfg.esquinas) {
+    update.esquinasLocal     = parseInt(document.getElementById("r-el-"+pid)?.value)||0;
+    update.esquinasVisitante = parseInt(document.getElementById("r-ev-"+pid)?.value)||0;
+  }
+  // Merge para no sobreescribir goles
+  await db.collection("resultados").doc(pid).set(update, { merge: true });
+  resultados[pid] = { ...resultados[pid], ...update };
+  toast("✓ Desempate guardado");
+  renderResultados(); renderTabla();
+}
+
+
+function actualizarOpcionesFinal() {
+  const select = document.getElementById('inp-tipo');
+  if (!select) return;
+  const habilitarFinal = configGlobal.habilitarFinal || currentUser.rol === 'admin';
+  const finales = ['campeon','subcampeon','tercer_puesto'];
+
+  finales.forEach(val => {
+    const existing = select.querySelector(`option[value="${val}"]`);
+    if (habilitarFinal && !existing) {
+      // Agregar opción si no existe
+      const labels = {campeon:'Campeón del mundial', subcampeon:'Subcampeón del mundial', tercer_puesto:'Tercer puesto del mundial'};
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = labels[val];
+      select.appendChild(opt);
+    } else if (!habilitarFinal && existing) {
+      // Remover opción si existe
+      existing.remove();
+      // Si era la seleccionada, cambiar a la primera disponible
+      if (select.value === val || !select.value) {
+        select.value = select.options[0]?.value || 'goleador';
+        updateTipo();
+      }
+    }
+  });
+}
+
+
+async function toggleHabilitarFinal() {
+  configGlobal.habilitarFinal = !configGlobal.habilitarFinal;
+  await db.collection('config').doc('global').set({ habilitarFinal: configGlobal.habilitarFinal }, { merge: true });
+  const estado = configGlobal.habilitarFinal ? 'habilitadas' : 'ocultas';
+  toast('✓ Apuestas de fase final ' + estado);
+  actualizarOpcionesFinal();
+  loadCierreGlobalUI();
+}
+
+
+async function saveCierreGoleadorValla() {
+  const cg = document.getElementById('cierre-goleador')?.value || '';
+  const cv = document.getElementById('cierre-valla')?.value    || '';
+  configGlobal.cierreGoleador = cg;
+  configGlobal.cierreValla    = cv;
+  await db.collection('config').doc('global').set(configGlobal, {merge:true});
+  toast('✓ Cierre guardado');
+}
+
+
+function estaAbiertoEspecial(tipo) {
+  const ahora = new Date();
+  if (tipo === 'goleador' && configGlobal.cierreGoleador)
+    return new Date(configGlobal.cierreGoleador) > ahora;
+  if (tipo === 'valla' && configGlobal.cierreValla)
+    return new Date(configGlobal.cierreValla) > ahora;
+  return true;
 }
 
 document.addEventListener('DOMContentLoaded', () => {

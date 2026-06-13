@@ -590,6 +590,11 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
           oninput="filtrarUsuarios(this.value)"
           style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:white;"/>
       </div>
+      <div id="stats-admin" class="stats-grid" style="display:none;margin-top:-4px;">
+      <div class="stat-box"><div class="stat-num" id="st-registrados" style="color:#1e3a6e;">0</div><div class="stat-lbl">Registrados</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-asociados" style="color:#1a6b3c;">0</div><div class="stat-lbl">Asociados</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-invitados" style="color:#c8972b;">0</div><div class="stat-lbl">Invitados</div></div>
+    </div>
       <div id="lista-usuarios"></div>
       <div class="card" style="margin-top:14px;">
         <div class="card-title">&#128279; Link de acceso general</div>
@@ -633,6 +638,25 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
             <span style="font-size:13px;font-weight:500;">WhatsApp habilitado</span>
           </label>
         </div>
+      </div>
+      <div class="card" style="margin-top:0;">
+        <div class="card-title">&#9986;&#65039; Eliminaci&oacute;n de participantes</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define cu&aacute;ndo y qu&eacute; porcentaje de participantes ser&aacute;n eliminados al final de grupos.</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+          <div style="flex:1;min-width:200px;">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">&#128197; Fecha de eliminaci&oacute;n</label>
+            <input type="datetime-local" id="fecha-eliminacion" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%;"/>
+          </div>
+          <div style="min-width:160px;">
+            <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">% a eliminar</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="number" id="pct-eliminacion" min="1" max="99" value="30" style="width:70px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;"/>
+              <span style="font-size:13px;color:var(--muted);">% menor puntaje</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="saveFechaEliminacion()">&#10003; Guardar configuraci&oacute;n</button>
+        <div id="estado-eliminacion" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
       </div>
     </div>
     <div id="admin-panel-textos" style="display:none;">
@@ -736,6 +760,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
     <button class="btn btn-primary" style="width:100%;" onclick="guardarNuevaPassword()">Guardar contraseña →</button>
   </div>
 </div>
+
 
 
 
