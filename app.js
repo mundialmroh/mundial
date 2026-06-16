@@ -159,7 +159,8 @@ let nextId      = 1;
 let unsubApuestas = null;
 
 // CACHÉ
-let _cachedUsuarios   = null;  // cache de usuarios Firestore
+let _cachedUsuarios   = null;
+let _horariosPartidos = {}; // { partidoId: isoString } hora de inicio de cada partido  // cache de usuarios Firestore
 let _cachedApuestasAd = null;  // cache de apuestas para admin
 let _cacheTs          = 0;     // timestamp del último fetch
 const CACHE_TTL       = 60000; // 60 segundos de vida del caché
@@ -201,6 +202,12 @@ function estaAbierto(partidoId, tipo) {
   // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
+  // Cierre automático: 30 min antes del inicio del partido
+  const horaInicio = _horariosPartidos[partidoId];
+  if (horaInicio) {
+    const cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    return cierre > ahora;
+  }
   return true; // sin cierre configurado = abierto
 }
 
@@ -212,6 +219,11 @@ function tiempoRestante(partidoId, tipo) {
   else {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
+  }
+  // Cierre automático: 30 min antes del inicio del partido
+  if (!cierre) {
+    const horaInicio = _horariosPartidos[partidoId];
+    if (horaInicio) cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
   }
   if (!cierre) return null;
   const diff = cierre - ahora;
@@ -935,7 +947,7 @@ function renderResultados() {
   if (!lista.length && !especialesHtml) { container.innerHTML='<div class="empty"><div class="empty-ico">⏳</div>Registra apuestas para ver partidos aquí</div>'; return; }
   container.innerHTML = especialesHtml;
   if (!lista.length) return;
-  const fechas = [...new Set(lista.map(p=>p.fecha))].sort((a,b)=>FECHA_ORDER[a]-FECHA_ORDER[b]);
+  const fechas = sortFechas([...new Set(lista.map(p=>p.fecha))]);
   container.innerHTML = fechas.map(f => {
     const ps = lista.filter(p=>p.fecha===f);
     return `<div class="fecha-bloque">
@@ -1026,6 +1038,13 @@ async function borrarResultado(pid) {
 }
 
 // Cargar resultados de Firestore al iniciar
+async function cargarHorarios() {
+  try {
+    const snap = await db.collection('horarios').get();
+    snap.docs.forEach(d => { _horariosPartidos[d.id] = d.data().horaInicio; });
+  } catch(e) { console.warn('No se pudieron cargar horarios:', e.message); }
+}
+
 async function cargarResultados() {
   // Cargar todo en paralelo para mayor velocidad
   const [snapRes] = await Promise.all([
@@ -1602,6 +1621,26 @@ async function syncResultados() {
     if(!terminados.length){showSyncMsg("⚠ No hay partidos finalizados aún","info");btn.disabled=false;btn.textContent="🔄 Sincronizar API";return;}
     let actualizados=0;
     const batch = db.batch();
+    // Guardar horarios de TODOS los partidos para cierre automático
+    const batchHorarios = db.batch();
+    games.forEach(g => {
+      const partido = PARTIDOS.find(p => {
+        const lm = TEAM_MAP[p.local]    || p.local;
+        const vm = TEAM_MAP[p.visitante] || p.visitante;
+        return (lm === g.home_team_name_en && vm === g.away_team_name_en) ||
+               (lm === g.away_team_name_en && vm === g.home_team_name_en);
+      });
+      if (!partido || !g.local_date) return;
+      // Parsear fecha "MM/DD/YYYY HH:mm" a ISO
+      const parts = g.local_date.split(' ');
+      const [month, day, year] = parts[0].split('/');
+      const [hour, min] = parts[1].split(':');
+      const isoStr = `${year}-${month}-${day}T${hour}:${min}:00`;
+      _horariosPartidos[partido.id] = isoStr;
+      batchHorarios.set(db.collection('horarios').doc(partido.id), { horaInicio: isoStr }, { merge: true });
+    });
+    await batchHorarios.commit();
+
     terminados.forEach(g => {
       // Buscar partido por nombre de equipo (en inglés)
       const partido = PARTIDOS.find(p => {
