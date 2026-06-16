@@ -2176,7 +2176,7 @@ function copiarLink(link) {
 
 function compartirWhatsAppInv(link, nombre) {
   const msg = encodeURIComponent(
-    'Hola! Te invitamos a participar en la Polla Mundialista FEES 2026 \u26BD\n\n' +
+    'Hola! Te invitamos a participar en la Polla Mundialista MROH 2026 \u26BD\n\n' +
     'Reg\u00EDstrate aqu\u00ED con tu link personal:\n' + link + '\n\n' +
     '\u00A1\u00DAnico e intransferible!'
   );
@@ -2229,7 +2229,7 @@ async function enviarInvitacionWA() {
   const link = await generarLinkInvitacion(email || '', nombre);
   const msg = encodeURIComponent(
     'Hola ' + (nombre || 'amigo') + '! \n\n' +
-    'Te invitamos a participar en la Polla Mundialista FEES 2026 \u26BD\n\n' +
+    'Te invitamos a participar en la Polla Mundialista MROH 2026 \u26BD\n\n' +
     'Reg\u00EDstrate con tu link personal (solo para ti):\n' + link + '\n\n' +
     'Te invita: ' + currentUser.nombre
   );
@@ -2296,7 +2296,7 @@ async function crearUsuarioIndividual() {
 // ============================================================
 const TEXTOS_DEFAULT = {
   // Header
-  app_titulo:       'Polla Mundialista FEES 2026',
+  app_titulo:       'Polla Mundialista MROH 2026',
   app_subtitulo:    'Estados Unidos · México · Canadá · 11 Jun – 19 Jul',
   app_slogan:       '¡Demuestra que sabes de fútbol!',
   // Navegación
