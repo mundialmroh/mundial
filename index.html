@@ -140,8 +140,16 @@ h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
 .inp-wrap .ico{position:absolute;left:11px;bottom:10px;font-size:15px;pointer-events:none;}
 /* HEADER */
 .header{background:#1f3c71;color:white;padding:10px 24px;display:flex;align-items:center;justify-content:space-between;position:relative;}
-.header h1{font-size:28px;color:white;}
+.header h1{font-size:20px;color:white;}
 .header-sub{font-size:11px;opacity:.75;margin-top:2px;}
+@media(max-width:700px){
+  .header{flex-wrap:wrap;padding:8px 12px;gap:4px;}
+  .header > div:first-child{flex:1;min-width:0;}
+  .header > div:first-child h1{font-size:14px !important;}
+  .header > div:first-child .header-sub{font-size:10px;}
+  .header-logo-center{position:static !important;transform:none !important;left:auto !important;height:32px !important;width:auto !important;max-width:150px !important;order:3;margin:0 auto;}
+  .header > div:last-child{flex-shrink:0;}
+}
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
 .user-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border-radius:20px;padding:6px 12px 6px 6px;cursor:pointer;}
 .user-pill:hover{background:rgba(255,255,255,.25);}
@@ -389,7 +397,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 <div class="header" id="main-header" style="display:none;">
   <!-- Titulo izquierda -->
   <div style="flex:1;">
-    <h1 id="hdr-titulo" style="font-size:20px;">🏆 Polla Mundialista 2026</h1>
+    <h1 id="hdr-titulo" style="font-size:18px;">🏆 Polla Mundialista MROH 2026</h1>
     <div class="header-sub" id="hdr-subtitulo">Estados Unidos · México · Canadá · 11 Jun – 19 Jul</div>
     <div id="header-slogan" style="font-size:11px;color:rgba(255,255,255,.85);margin-top:1px;font-style:italic;">¡Demuestra que sabes de fútbol!</div>
     <div id="sync-status" style="font-size:10px;margin-top:2px;opacity:.8;">
