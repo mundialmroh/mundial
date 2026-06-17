@@ -2348,10 +2348,7 @@ async function cargarTextos() {
 
 function aplicarTextos() {
   const map = {
-    // Header
-    'hdr-titulo':        textos.app_titulo,
-    'hdr-subtitulo':     textos.app_subtitulo,
-    'header-slogan':     textos.app_slogan,
+    // Header (subtitulo y slogan ocultos por diseño)
     'auth-titulo':       textos.app_titulo,
     'auth-slogan':       textos.app_slogan,
     // Secciones
