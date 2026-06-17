@@ -2297,8 +2297,8 @@ async function crearUsuarioIndividual() {
 const TEXTOS_DEFAULT = {
   // Header
   app_titulo:       'Polla Mundialista MROH 2026',
-  app_subtitulo:    'Estados Unidos · México · Canadá · 11 Jun – 19 Jul',
-  app_slogan:       '¡Demuestra que sabes de fútbol!',
+  app_subtitulo:    '',
+  app_slogan:       '',
   // Navegación
   nav_nueva:        '📝 Nueva apuesta',
   nav_partidos:     '⚽ Partidos',
