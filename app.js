@@ -340,6 +340,7 @@ let unsubUserProfile = null;
 function showApp() {
   document.getElementById("auth-overlay").style.display  = "none";
   document.getElementById("main-header").style.display   = "";
+  const footer = document.getElementById("main-footer"); if(footer) footer.style.display = "";
   document.getElementById("main-nav").style.display      = "";
   document.getElementById("main-content").style.display  = "";
   actualizarHeaderUsuario();
@@ -389,6 +390,7 @@ function actualizarHeaderUsuario() {
 function showAuth() {
   document.getElementById("auth-overlay").style.display  = "flex";
   document.getElementById("main-header").style.display   = "none";
+  const footer = document.getElementById("main-footer"); if(footer) footer.style.display = "none";
   document.getElementById("main-nav").style.display      = "none";
   document.getElementById("main-content").style.display  = "none";
   document.getElementById("nav-admin").style.display     = "none";

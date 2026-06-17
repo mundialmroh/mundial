@@ -42,7 +42,7 @@ emailjs.init("QuhqmKCi-H5CYLYXt");
   --text:#1a1a1a;--muted:#6b6b6b;
   --border:#e0dbd2;--radius:10px;
 }
-body{font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+body{display:flex;flex-direction:column;min-height:100vh;font-family:"Inter",sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
 h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
 /* AUTH */
 .auth-overlay{
@@ -306,6 +306,12 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 #btn-aceptar-datos{background:#1f3c71;color:white;border:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;transition:.2s;width:100%;}
 #btn-aceptar-datos:disabled{background:#aaa;cursor:not-allowed;}
 #btn-aceptar-datos:not(:disabled):hover{background:#162d57;}
+
+/* FOOTER */
+.app-footer{background:#1f3c71;color:rgba(255,255,255,.7);text-align:center;padding:14px 20px;font-size:11px;border-top:1px solid rgba(255,255,255,.1);flex-shrink:0;}
+.app-footer strong{color:white;}
+.app-footer .footer-logos{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+.app-footer .footer-logos img{height:22px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;}
 </style>
 </head>
 <body>
@@ -772,5 +778,13 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 
 
 
+
+<!-- FOOTER -->
+<footer class="app-footer" id="main-footer" style="display:none;">
+  <div class="footer-logos">
+    <img src="logos-mroh.png" alt="MROH Rionegro"/>
+  </div>
+  <div><strong>Mundial 2026</strong> &nbsp;·&nbsp; Estados Unidos · México · Canadá &nbsp;·&nbsp; 11 Jun – 19 Jul</div>
+</footer>
 </body>
 </html>
