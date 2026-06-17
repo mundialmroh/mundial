@@ -2376,7 +2376,15 @@ function aplicarTextos() {
   };
   Object.entries(map).forEach(([id, val]) => {
     const el = document.getElementById(id);
-    if (el && val) el.textContent = val;
+    if (el) {
+      if (val) {
+        el.textContent = val;
+        el.style.display = '';
+      } else {
+        el.textContent = '';
+        el.style.display = 'none';
+      }
+    }
   });
   // Nav buttons (by data-nav attribute)
   const navMap = {
