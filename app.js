@@ -310,8 +310,8 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore forzando lectura desde servidor (no caché)
-    const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
+    // Cargar perfil de Firestore
+    const snap = await db.collection("usuarios").doc(user.uid).get();
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
       uid:              user.uid,
@@ -1053,7 +1053,8 @@ async function cargarResultados() {
     db.collection("resultados").get(),
     cargarConfigPartidos(),
     cargarTextos(),
-    cargarCriterios()
+    cargarCriterios(),
+    cargarHorarios()
   ]);
   snapRes.forEach(doc => { resultados[doc.id] = doc.data(); });
   // Estas dependen de datos cargados arriba
@@ -1534,10 +1535,10 @@ function renderListaUsuarios(users) {
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
           ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
           ${!isMe?`
-            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${(u.nombre||'').replace(/'/g,"\\'")}','${u.rol||"user"}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
+            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
               ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
             </button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${(u.nombre||'').replace(/'/g,"\\'")}') " title="Eliminar">🗑</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
           `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
         </div>
       </div>`;
@@ -1546,22 +1547,13 @@ function renderListaUsuarios(users) {
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
-  const rolLimpio = (rolActual === "admin") ? "admin" : "user";
-  const nuevoRol = rolLimpio === "admin" ? "user" : "admin";
+  const nuevoRol = rolActual === "admin" ? "user" : "admin";
   const accion   = nuevoRol === "admin" ? "hacer admin" : "quitar rol de admin";
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
-    // Verificar que Firestore realmente guardó el cambio
-    const verificacion = await db.collection("usuarios").doc(uid).get();
-    const rolGuardado = verificacion.data()?.rol;
-    if (rolGuardado !== nuevoRol) {
-      toast("⚠️ Error: el rol no se guardó correctamente en Firestore");
-      return;
-    }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
-    invalidarCache();
-    renderUsuarios(true);
+    renderUsuarios();
   } catch(e) { toast("Error: " + e.message); }
 }
 
