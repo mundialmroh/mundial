@@ -194,21 +194,17 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
-// Interpreta horario sin zona como hora Colombia (UTC-5)
 function horaColombiaToDate(iso) {
-  if (iso.endsWith('Z') || iso.includes('+') || iso.slice(-6, -5) === '-') return new Date(iso);
+  if (iso.endsWith('Z') || iso.includes('+') || iso.slice(-6,-5) === '-') return new Date(iso);
   return new Date(iso + '-05:00');
 }
 
 function estaAbierto(partidoId, tipo) {
   const cfg = configPartidos[partidoId];
   const ahora = new Date();
-  // Cierre individual del partido
   if (cfg && cfg.cierreISO) return new Date(cfg.cierreISO) > ahora;
-  // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio (hora Colombia)
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
     const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
@@ -226,7 +222,6 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio (hora Colombia)
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
     if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
@@ -351,7 +346,7 @@ function showApp() {
   document.getElementById("main-content").style.display  = "";
   actualizarHeaderUsuario();
   renderPtsInfo();
-  // Cargar todos los datos necesarios tras autenticación
+  // Cargar todos los datos tras autenticación
   cargarResultados();
   suscribirApuestas();
 
@@ -1102,7 +1097,8 @@ async function renderTabla() {
   let todosUsuarios = [];
   try {
     if (esAdmin) {
-      await cargarUsuariosCache(); todosUsuarios = _cachedUsuarios;
+      await cargarUsuariosCache();
+      todosUsuarios = _cachedUsuarios.map(u => ({uid: u.id || u.uid, ...u}));
       const total     = todosUsuarios.length;
       const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
       const asociados = total - invitados;
@@ -1114,7 +1110,7 @@ async function renderTabla() {
       if (stInv) stInv.textContent = invitados;
       if (stAso) stAso.textContent = asociados;
       document.getElementById("st-partic").textContent = total;
-      if (stCon) { const conApuesta = new Set(_cachedApuestasAd.map(a => a.uid)).size; stCon.textContent = conApuesta; }
+      if (stCon) { const conApuesta = new Set((_cachedApuestasAd||[]).map(a => a.uid)).size; stCon.textContent = conApuesta; }
     } else {
       // Usar cache de apuestas para tabla (cargado al abrir pestaña)
       const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
@@ -1146,7 +1142,7 @@ async function renderTabla() {
     .filter(u => u.rol !== 'admin')
     .map(u => {
       // Si hay filtro de partido, solo contar puntos de ese partido
-      const fuenteApuestas = esAdmin ? apuestas : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
+      const fuenteApuestas = esAdmin ? (_cachedApuestasAd || apuestas) : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
       const bets = filtroPartido
         ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido)
         : fuenteApuestas.filter(a => a.uid === u.uid);
