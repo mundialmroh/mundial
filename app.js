@@ -196,7 +196,7 @@ let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
 // Interpreta horario sin zona como hora Colombia (UTC-5)
 function horaColombiaToDate(iso) {
-  if (iso.includes('Z') || iso.includes('+') || /\d{2}:\d{2}$/.test(iso.slice(-6)) && iso.slice(-6,-5) === '-') return new Date(iso);
+  if (iso.endsWith('Z') || iso.includes('+') || iso.slice(-6, -5) === '-') return new Date(iso);
   return new Date(iso + '-05:00');
 }
 
