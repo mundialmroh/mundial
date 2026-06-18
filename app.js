@@ -1137,6 +1137,8 @@ async function renderTabla() {
       })[0]
     : null;
 
+  // Partidos excluidos (anteriores al inicio oficial de la polla: 18 Jun)
+  const PARTIDOS_EXCLUIDOS = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
   // Construir ranking con todos los usuarios
   const ranking = todosUsuarios
     .filter(u => u.rol !== 'admin')
@@ -1144,8 +1146,8 @@ async function renderTabla() {
       // Si hay filtro de partido, solo contar puntos de ese partido
       const fuenteApuestas = esAdmin ? (_cachedApuestasAd || apuestas) : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
       const bets = filtroPartido
-        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido)
-        : fuenteApuestas.filter(a => a.uid === u.uid);
+        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido && !PARTIDOS_EXCLUIDOS.has(a.partidoId))
+        : fuenteApuestas.filter(a => a.uid === u.uid && !PARTIDOS_EXCLUIDOS.has(a.partidoId));
       const fases = filtroPartido ? {} : calcPuntosPorFase(bets);
       const total = bets.reduce((s,a) => s+calcPuntos(a), 0);
       const nombre = u.nombre || u.email;
