@@ -194,11 +194,9 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
-// Interpreta horario guardado como hora Colombia (UTC-5) y retorna Date UTC
+// Interpreta horario sin zona como hora Colombia (UTC-5)
 function horaColombiaToDate(isoSinZona) {
-  // Si ya tiene zona horaria, parsear directo
-  if (/Z|[+-]\d{2}:\d{2}$/.test(isoSinZona)) return new Date(isoSinZona);
-  // Sin zona: asumir hora Colombia (UTC-5) => sumar 5 horas para obtener UTC
+  if (/Z|[+\-]\d{2}:\d{2}$/.test(isoSinZona)) return new Date(isoSinZona);
   return new Date(isoSinZona + '-05:00');
 }
 
@@ -210,7 +208,7 @@ function estaAbierto(partidoId, tipo) {
   // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
+  // Cierre automático: 30 min antes del inicio del partido
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
     const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
@@ -228,7 +226,7 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
+  // Cierre automático: 30 min antes del inicio del partido
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
     if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
@@ -1104,7 +1102,7 @@ async function renderTabla() {
   let todosUsuarios = [];
   try {
     if (esAdmin) {
-      todosUsuarios = await getUsuarios();
+      await cargarUsuariosCache(); todosUsuarios = _cachedUsuarios;
       const total     = todosUsuarios.length;
       const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
       const asociados = total - invitados;
@@ -2790,7 +2788,7 @@ async function exportXLSX(){
 
   // ── Hoja 3: Usuarios registrados ──
   try {
-    const snapUsers = await getUsuarios();
+    await cargarUsuariosCache(); const snapUsers = _cachedUsuarios;
     const hdUsers = ["#","Nombre","Correo","Celular","Rol","Tipo","Apuestas","Puntos"];
     const rowsUsers = snapUsers.map((u,i) => {
       const bets = apuestas.filter(a=>a.uid===u.uid);
