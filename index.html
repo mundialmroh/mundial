@@ -143,11 +143,8 @@ h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
 .header h1{font-size:20px;color:white;}
 .header-sub{font-size:11px;opacity:.75;margin-top:2px;}
 @media(max-width:700px){
-  .header{flex-wrap:wrap;padding:8px 12px;gap:4px;}
-  .header > div:first-child{flex:1;min-width:0;}
-  .header > div:first-child h1{font-size:14px !important;}
-  .header > div:first-child .header-sub{font-size:10px;}
-  .header-logo-center{position:static !important;transform:none !important;left:auto !important;height:32px !important;width:auto !important;max-width:150px !important;order:3;margin:0 auto;}
+  .header{flex-wrap:nowrap;padding:8px 12px;gap:4px;align-items:center;}
+  .header > div:first-child img{height:34px !important;max-width:160px !important;}
   .header > div:last-child{flex-shrink:0;}
 }
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
@@ -401,17 +398,10 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 
 <!-- HEADER -->
 <div class="header" id="main-header" style="display:none;">
-  <!-- Titulo izquierda -->
-  <div style="flex:1;">
-    <h1 id="hdr-titulo" style="font-size:18px;">🏆 Polla Mundialista MROH 2026</h1>
-    <div class="header-sub" id="hdr-subtitulo" style="display:none;"></div>
-    <div id="header-slogan" style="font-size:11px;color:rgba(255,255,255,.85);margin-top:1px;font-style:italic;display:none;"></div>
-    <div id="sync-status" style="font-size:10px;margin-top:2px;opacity:.8;">
-      <span class="sync-dot" style="background:#4ade80;"></span>Conectado con Firebase
-    </div>
+  <!-- Logo centrado -->
+  <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+    <img src="logos-mroh.png" alt="MROH Rionegro" style="height:46px;width:auto;object-fit:contain;max-width:220px;">
   </div>
-  <!-- Logo centro absoluto -->
-  <img src="logos-mroh.png" alt="MROH Rionegro" style="position:absolute;left:50%;transform:translateX(-50%);height:50px;width:auto;object-fit:contain;pointer-events:none;">
   <!-- Usuario derecha -->
   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
     <div class="user-pill" onclick="doLogout()" title="Cerrar sesi&oacute;n">
