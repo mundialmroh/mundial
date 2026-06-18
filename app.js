@@ -351,8 +351,8 @@ function showApp() {
   document.getElementById("main-content").style.display  = "";
   actualizarHeaderUsuario();
   renderPtsInfo();
-  // Cargar config de partidos temprano para que los campos de desempate aparezcan
-  cargarConfigPartidos().then(() => renderPartidos());
+  // Cargar todos los datos necesarios tras autenticación
+  cargarResultados();
   suscribirApuestas();
 
   // Escuchar cambios de rol en tiempo real
@@ -3013,7 +3013,6 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarAutorizacion();
   init();
   updateTipo();
-  cargarResultados();
   // Fallback: si onAuthStateChanged no responde en 6s, mostrar login
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
