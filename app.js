@@ -310,8 +310,8 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore
-    const snap = await db.collection("usuarios").doc(user.uid).get();
+    // Cargar perfil de Firestore forzando lectura desde servidor (no caché)
+    const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
       uid:              user.uid,
@@ -1552,8 +1552,16 @@ async function toggleAdmin(uid, nombre, rolActual) {
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
+    // Verificar que Firestore realmente guardó el cambio
+    const verificacion = await db.collection("usuarios").doc(uid).get();
+    const rolGuardado = verificacion.data()?.rol;
+    if (rolGuardado !== nuevoRol) {
+      toast("⚠️ Error: el rol no se guardó correctamente en Firestore");
+      return;
+    }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
-    renderUsuarios();
+    invalidarCache();
+    renderUsuarios(true);
   } catch(e) { toast("Error: " + e.message); }
 }
 
