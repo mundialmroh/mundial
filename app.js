@@ -1534,10 +1534,10 @@ function renderListaUsuarios(users) {
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
           ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
           ${!isMe?`
-            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
+            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${(u.nombre||'').replace(/'/g,"\\'")}','${u.rol||"user"}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
               ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
             </button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${(u.nombre||'').replace(/'/g,"\\'")}') " title="Eliminar">🗑</button>
           `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
         </div>
       </div>`;
@@ -1546,7 +1546,8 @@ function renderListaUsuarios(users) {
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
-  const nuevoRol = rolActual === "admin" ? "user" : "admin";
+  const rolLimpio = (rolActual === "admin") ? "admin" : "user";
+  const nuevoRol = rolLimpio === "admin" ? "user" : "admin";
   const accion   = nuevoRol === "admin" ? "hacer admin" : "quitar rol de admin";
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
