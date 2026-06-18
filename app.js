@@ -194,6 +194,12 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
+// Interpreta horario sin zona como hora Colombia (UTC-5)
+function horaColombiaToDate(isoSinZona) {
+  if (/Z|[+-]\d{2}:\d{2}$/.test(isoSinZona)) return new Date(isoSinZona);
+  return new Date(isoSinZona + '-05:00');
+}
+
 function estaAbierto(partidoId, tipo) {
   const cfg = configPartidos[partidoId];
   const ahora = new Date();
@@ -202,10 +208,10 @@ function estaAbierto(partidoId, tipo) {
   // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio del partido
+  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
-    const cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
     return cierre > ahora;
   }
   return true; // sin cierre configurado = abierto
@@ -220,10 +226,10 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio del partido
+  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
-    if (horaInicio) cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
   }
   if (!cierre) return null;
   const diff = cierre - ahora;
@@ -310,8 +316,8 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore
-    const snap = await db.collection("usuarios").doc(user.uid).get();
+    // Cargar perfil de Firestore forzando lectura desde servidor (no caché)
+    const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
       uid:              user.uid,
@@ -1053,7 +1059,8 @@ async function cargarResultados() {
     db.collection("resultados").get(),
     cargarConfigPartidos(),
     cargarTextos(),
-    cargarCriterios()
+    cargarCriterios(),
+    cargarHorarios()
   ]);
   snapRes.forEach(doc => { resultados[doc.id] = doc.data(); });
   // Estas dependen de datos cargados arriba
@@ -1095,17 +1102,22 @@ async function renderTabla() {
   let todosUsuarios = [];
   try {
     if (esAdmin) {
-      todosUsuarios = await getUsuarios();
+      await cargarUsuariosCache(); todosUsuarios = _cachedUsuarios;
       const total     = todosUsuarios.length;
       const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
       const asociados = total - invitados;
       const stReg = document.getElementById('st-registrados');
       const stInv = document.getElementById('st-invitados');
       const stAso = document.getElementById('st-asociados');
+      const stCon = document.getElementById('st-con-apuesta');
       if (stReg) stReg.textContent = total;
       if (stInv) stInv.textContent = invitados;
       if (stAso) stAso.textContent = asociados;
       document.getElementById("st-partic").textContent = total;
+      if (stCon) {
+        const conApuesta = new Set(_cachedApuestasAd.map(a => a.uid)).size;
+        stCon.textContent = conApuesta;
+      }
     } else {
       // Usar cache de apuestas para tabla (cargado al abrir pestaña)
       const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
@@ -1535,10 +1547,10 @@ function renderListaUsuarios(users) {
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
           ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
           ${!isMe?`
-            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
+            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${(u.nombre||'').replace(/'/g,\"\\'\")}','${u.rol||"user"}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
               ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
             </button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${(u.nombre||'').replace(/'/g,\"\\'\")}') " title="Eliminar">🗑</button>
           `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
         </div>
       </div>`;
@@ -1547,13 +1559,18 @@ function renderListaUsuarios(users) {
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
-  const nuevoRol = rolActual === "admin" ? "user" : "admin";
+  const rolLimpio = (rolActual === "admin") ? "admin" : "user";
+  const nuevoRol = rolLimpio === "admin" ? "user" : "admin";
   const accion   = nuevoRol === "admin" ? "hacer admin" : "quitar rol de admin";
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
+    const verificacion = await db.collection("usuarios").doc(uid).get();
+    const rolGuardado = verificacion.data()?.rol;
+    if (rolGuardado !== nuevoRol) { toast("⚠️ Error: el rol no se guardó correctamente"); return; }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
-    renderUsuarios();
+    invalidarCache();
+    renderUsuarios(true);
   } catch(e) { toast("Error: " + e.message); }
 }
 
@@ -2782,7 +2799,7 @@ async function exportXLSX(){
 
   // ── Hoja 3: Usuarios registrados ──
   try {
-    const snapUsers = await getUsuarios();
+    await cargarUsuariosCache(); const snapUsers = _cachedUsuarios;
     const hdUsers = ["#","Nombre","Correo","Celular","Rol","Tipo","Apuestas","Puntos"];
     const rowsUsers = snapUsers.map((u,i) => {
       const bets = apuestas.filter(a=>a.uid===u.uid);
