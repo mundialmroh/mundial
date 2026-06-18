@@ -195,9 +195,9 @@ let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
 // Interpreta horario sin zona como hora Colombia (UTC-5)
-function horaColombiaToDate(isoSinZona) {
-  if (/Z|[+-]\d{2}:\d{2}$/.test(isoSinZona)) return new Date(isoSinZona);
-  return new Date(isoSinZona + '-05:00');
+function horaColombiaToDate(iso) {
+  if (iso.includes('Z') || iso.includes('+') || /\d{2}:\d{2}$/.test(iso.slice(-6)) && iso.slice(-6,-5) === '-') return new Date(iso);
+  return new Date(iso + '-05:00');
 }
 
 function estaAbierto(partidoId, tipo) {
@@ -208,13 +208,13 @@ function estaAbierto(partidoId, tipo) {
   // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
+  // Cierre automático: 30 min antes del inicio (hora Colombia)
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
     const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
     return cierre > ahora;
   }
-  return true; // sin cierre configurado = abierto
+  return true;
 }
 
 function tiempoRestante(partidoId, tipo) {
@@ -226,7 +226,7 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
+  // Cierre automático: 30 min antes del inicio (hora Colombia)
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
     if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
@@ -316,7 +316,7 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore forzando lectura desde servidor (no caché)
+    // Cargar perfil de Firestore desde servidor
     const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
@@ -1114,10 +1114,7 @@ async function renderTabla() {
       if (stInv) stInv.textContent = invitados;
       if (stAso) stAso.textContent = asociados;
       document.getElementById("st-partic").textContent = total;
-      if (stCon) {
-        const conApuesta = new Set(_cachedApuestasAd.map(a => a.uid)).size;
-        stCon.textContent = conApuesta;
-      }
+      if (stCon) { const conApuesta = new Set(_cachedApuestasAd.map(a => a.uid)).size; stCon.textContent = conApuesta; }
     } else {
       // Usar cache de apuestas para tabla (cargado al abrir pestaña)
       const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
@@ -1547,10 +1544,10 @@ function renderListaUsuarios(users) {
         <div style="display:flex;gap:6px;align-items:center;flex-shrink:0;">
           ${u.celular&&!tieneApuesta?`<button class="btn btn-gold btn-sm" onclick="enviarWhatsApp('${u.celular}','${u.nombre}')" title="Enviar recordatorio WhatsApp">📲</button>`:''}
           ${!isMe?`
-            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${(u.nombre||'').replace(/'/g,\"\\'\")}','${u.rol||"user"}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
+            <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
               ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
             </button>
-            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${(u.nombre||'').replace(/'/g,\"\\'\")}') " title="Eliminar">🗑</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
           `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
         </div>
       </div>`;
@@ -1565,9 +1562,8 @@ async function toggleAdmin(uid, nombre, rolActual) {
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
-    const verificacion = await db.collection("usuarios").doc(uid).get();
-    const rolGuardado = verificacion.data()?.rol;
-    if (rolGuardado !== nuevoRol) { toast("⚠️ Error: el rol no se guardó correctamente"); return; }
+    const ver = await db.collection("usuarios").doc(uid).get();
+    if (ver.data()?.rol !== nuevoRol) { toast("Error: el rol no se guardó"); return; }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
     invalidarCache();
     renderUsuarios(true);
