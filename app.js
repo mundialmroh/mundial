@@ -194,6 +194,14 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
+// Interpreta horario guardado como hora Colombia (UTC-5) y retorna Date UTC
+function horaColombiaToDate(isoSinZona) {
+  // Si ya tiene zona horaria, parsear directo
+  if (/Z|[+-]\d{2}:\d{2}$/.test(isoSinZona)) return new Date(isoSinZona);
+  // Sin zona: asumir hora Colombia (UTC-5) => sumar 5 horas para obtener UTC
+  return new Date(isoSinZona + '-05:00');
+}
+
 function estaAbierto(partidoId, tipo) {
   const cfg = configPartidos[partidoId];
   const ahora = new Date();
@@ -202,10 +210,10 @@ function estaAbierto(partidoId, tipo) {
   // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio del partido
+  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
-    const cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
     return cierre > ahora;
   }
   return true; // sin cierre configurado = abierto
@@ -220,10 +228,10 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio del partido
+  // Cierre automático: 30 min antes del inicio del partido (hora Colombia)
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
-    if (horaInicio) cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
   }
   if (!cierre) return null;
   const diff = cierre - ahora;
