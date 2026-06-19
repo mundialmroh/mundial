@@ -194,23 +194,21 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
-function horaColombiaToDate(iso) {
-  if (iso.endsWith('Z') || iso.includes('+') || iso.slice(-6,-5) === '-') return new Date(iso);
-  return new Date(iso + '-05:00');
-}
-
 function estaAbierto(partidoId, tipo) {
   const cfg = configPartidos[partidoId];
   const ahora = new Date();
+  // Cierre individual del partido
   if (cfg && cfg.cierreISO) return new Date(cfg.cierreISO) > ahora;
+  // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
+  // Cierre automático: 30 min antes del inicio del partido
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
-    const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
+    const cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
     return cierre > ahora;
   }
-  return true;
+  return true; // sin cierre configurado = abierto
 }
 
 function tiempoRestante(partidoId, tipo) {
@@ -222,9 +220,10 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
+  // Cierre automático: 30 min antes del inicio del partido
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
-    if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
+    if (horaInicio) cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
   }
   if (!cierre) return null;
   const diff = cierre - ahora;
@@ -311,8 +310,8 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore desde servidor
-    const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
+    // Cargar perfil de Firestore
+    const snap = await db.collection("usuarios").doc(user.uid).get();
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
       uid:              user.uid,
@@ -346,8 +345,8 @@ function showApp() {
   document.getElementById("main-content").style.display  = "";
   actualizarHeaderUsuario();
   renderPtsInfo();
-  // Cargar todos los datos tras autenticación
-  cargarResultados();
+  // Cargar config de partidos temprano para que los campos de desempate aparezcan
+  cargarConfigPartidos().then(() => renderPartidos());
   suscribirApuestas();
 
   // Escuchar cambios de rol en tiempo real
@@ -1054,8 +1053,7 @@ async function cargarResultados() {
     db.collection("resultados").get(),
     cargarConfigPartidos(),
     cargarTextos(),
-    cargarCriterios(),
-    cargarHorarios()
+    cargarCriterios()
   ]);
   snapRes.forEach(doc => { resultados[doc.id] = doc.data(); });
   // Estas dependen de datos cargados arriba
@@ -1070,6 +1068,8 @@ async function renderTabla() {
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   document.getElementById("st-partic").textContent   = personas.length;
   document.getElementById("st-partidos").textContent = new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId)).size;
+  const elConApuesta = document.getElementById("st-con-apuesta-tabla");
+  if (elConApuesta) elConApuesta.textContent = new Set(apuestas.filter(a=>a.uid).map(a=>a.uid)).size;
 
   const container = document.getElementById("tabla-ranking");
   container.innerHTML = '<div class="empty" style="padding:24px">Cargando...</div>';
@@ -1097,20 +1097,17 @@ async function renderTabla() {
   let todosUsuarios = [];
   try {
     if (esAdmin) {
-      await cargarUsuariosCache();
-      todosUsuarios = _cachedUsuarios.map(u => ({uid: u.id || u.uid, ...u}));
+      todosUsuarios = await getUsuarios();
       const total     = todosUsuarios.length;
       const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
       const asociados = total - invitados;
       const stReg = document.getElementById('st-registrados');
       const stInv = document.getElementById('st-invitados');
       const stAso = document.getElementById('st-asociados');
-      const stCon = document.getElementById('st-con-apuesta');
       if (stReg) stReg.textContent = total;
       if (stInv) stInv.textContent = invitados;
       if (stAso) stAso.textContent = asociados;
       document.getElementById("st-partic").textContent = total;
-      if (stCon) { const conApuesta = new Set((_cachedApuestasAd||[]).map(a => a.uid)).size; stCon.textContent = conApuesta; }
     } else {
       // Usar cache de apuestas para tabla (cargado al abrir pestaña)
       const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
@@ -1137,17 +1134,15 @@ async function renderTabla() {
       })[0]
     : null;
 
-  // Partidos excluidos (anteriores al inicio oficial de la polla: 18 Jun)
-  const PARTIDOS_EXCLUIDOS = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
   // Construir ranking con todos los usuarios
   const ranking = todosUsuarios
     .filter(u => u.rol !== 'admin')
     .map(u => {
       // Si hay filtro de partido, solo contar puntos de ese partido
-      const fuenteApuestas = esAdmin ? (_cachedApuestasAd || apuestas) : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
+      const fuenteApuestas = esAdmin ? apuestas : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
       const bets = filtroPartido
-        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido && !PARTIDOS_EXCLUIDOS.has(a.partidoId))
-        : fuenteApuestas.filter(a => a.uid === u.uid && !PARTIDOS_EXCLUIDOS.has(a.partidoId));
+        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido)
+        : fuenteApuestas.filter(a => a.uid === u.uid);
       const fases = filtroPartido ? {} : calcPuntosPorFase(bets);
       const total = bets.reduce((s,a) => s+calcPuntos(a), 0);
       const nombre = u.nombre || u.email;
@@ -1326,7 +1321,7 @@ async function eliminarCriterio(i) {
 
 // ADMIN USUARIOS
 function adminSubTab(tab) {
-  ["usuarios","puntos","config","textos","apuestas-usr"].forEach(t => {
+  ["usuarios","puntos","config","textos"].forEach(t => {
     document.getElementById("admin-panel-"+t).style.display = tab===t?"block":"none";
     const base = "flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid ";
     const el = document.getElementById("asubt-"+t);
@@ -1335,8 +1330,7 @@ function adminSubTab(tab) {
   if(tab==="puntos")  renderCriterios();
   if(tab==="config")  { renderConfigPartidos(); initConfigFiltros(); loadCierreGlobalUI(); }
   if(tab==="textos")  renderTextos();
-  if(tab==="usuarios")    renderUsuarios();
-  if(tab==="apuestas-usr") renderApuestasPorUsuario();
+  if(tab==="usuarios")renderUsuarios();
 }
 
 function initConfigFiltros() {
@@ -1554,17 +1548,13 @@ function renderListaUsuarios(users) {
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
-  const rolLimpio = (rolActual === "admin") ? "admin" : "user";
-  const nuevoRol = rolLimpio === "admin" ? "user" : "admin";
+  const nuevoRol = rolActual === "admin" ? "user" : "admin";
   const accion   = nuevoRol === "admin" ? "hacer admin" : "quitar rol de admin";
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
-    const ver = await db.collection("usuarios").doc(uid).get();
-    if (ver.data()?.rol !== nuevoRol) { toast("Error: el rol no se guardó"); return; }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
-    invalidarCache();
-    renderUsuarios(true);
+    renderUsuarios();
   } catch(e) { toast("Error: " + e.message); }
 }
 
@@ -2793,7 +2783,7 @@ async function exportXLSX(){
 
   // ── Hoja 3: Usuarios registrados ──
   try {
-    await cargarUsuariosCache(); const snapUsers = _cachedUsuarios;
+    const snapUsers = await getUsuarios();
     const hdUsers = ["#","Nombre","Correo","Celular","Rol","Tipo","Apuestas","Puntos"];
     const rowsUsers = snapUsers.map((u,i) => {
       const bets = apuestas.filter(a=>a.uid===u.uid);
@@ -3011,6 +3001,7 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarAutorizacion();
   init();
   updateTipo();
+  cargarResultados();
   // Fallback: si onAuthStateChanged no responde en 6s, mostrar login
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');
