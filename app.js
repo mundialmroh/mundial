@@ -828,6 +828,38 @@ function preselectPartido(pid) {
 }
 
 // RENDER APUESTAS
+function renderApuestasPorPartido() {
+  const container = document.getElementById('apuestas-por-partido');
+  if (!container) return;
+  const EXCL = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
+  // Contar apuestas válidas por partido
+  const conteo = {};
+  apuestas.forEach(a => {
+    if (a.tipo === 'grupo' && a.partidoId && !EXCL.has(a.partidoId)) {
+      conteo[a.partidoId] = (conteo[a.partidoId] || 0) + 1;
+    }
+  });
+  // Ordenar por partido
+  const partidos = PARTIDOS.filter(p => !EXCL.has(p.id));
+  if (partidos.length === 0) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Sin datos</div>'; return; }
+  const maxVal = Math.max(...partidos.map(p => conteo[p.id] || 0), 1);
+  container.innerHTML = partidos.map(p => {
+    const n = conteo[p.id] || 0;
+    const pct = Math.round((n / maxVal) * 100);
+    const color = n === 0 ? 'var(--border)' : n >= maxVal * 0.8 ? 'var(--verde)' : n >= maxVal * 0.4 ? 'var(--oro)' : '#e57373';
+    return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);min-width:28px;">${p.id}</div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${p.local} vs ${p.visitante}</div>
+        <div style="margin-top:3px;background:var(--border);border-radius:4px;height:6px;overflow:hidden;">
+          <div style="width:${pct}%;height:100%;background:${color};border-radius:4px;transition:width .3s;"></div>
+        </div>
+      </div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${color};min-width:36px;text-align:right;">${n}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderApuestas() {
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   const grupos   = [...new Set(apuestas.filter(a=>a.grupo).map(a=>a.grupo))];
@@ -1070,8 +1102,12 @@ async function renderTabla() {
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   document.getElementById("st-partic").textContent   = personas.length;
   document.getElementById("st-partidos").textContent = new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId)).size;
+  renderApuestasPorPartido();
   const elCon = document.getElementById("st-con-apuesta-tabla");
-  if (elCon) elCon.textContent = new Set(apuestas.filter(a=>a.uid).map(a=>a.uid)).size;
+  if (elCon) {
+    const EXCL = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
+    elCon.textContent = new Set(apuestas.filter(a => a.uid && a.tipo === 'grupo' && !EXCL.has(a.partidoId)).map(a => a.uid)).size;
+  }
 
   const container = document.getElementById("tabla-ranking");
   container.innerHTML = '<div class="empty" style="padding:24px">Cargando...</div>';
