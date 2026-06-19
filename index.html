@@ -143,11 +143,8 @@ h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
 .header h1{font-size:20px;color:white;}
 .header-sub{font-size:11px;opacity:.75;margin-top:2px;}
 @media(max-width:700px){
-  .header{flex-wrap:wrap;padding:8px 12px;gap:4px;}
-  .header > div:first-child{flex:1;min-width:0;}
-  .header > div:first-child h1{font-size:14px !important;}
-  .header > div:first-child .header-sub{font-size:10px;}
-  .header-logo-center{position:static !important;transform:none !important;left:auto !important;height:32px !important;width:auto !important;max-width:150px !important;order:3;margin:0 auto;}
+  .header{flex-wrap:nowrap;padding:8px 12px;gap:4px;align-items:center;}
+  .header > div:first-child img{height:34px !important;max-width:160px !important;}
   .header > div:last-child{flex-shrink:0;}
 }
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
@@ -401,17 +398,10 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 
 <!-- HEADER -->
 <div class="header" id="main-header" style="display:none;">
-  <!-- Titulo izquierda -->
-  <div style="flex:1;">
-    <h1 id="hdr-titulo" style="font-size:18px;">🏆 Polla Mundialista MROH 2026</h1>
-    <div class="header-sub" id="hdr-subtitulo" style="display:none;"></div>
-    <div id="header-slogan" style="font-size:11px;color:rgba(255,255,255,.85);margin-top:1px;font-style:italic;display:none;"></div>
-    <div id="sync-status" style="font-size:10px;margin-top:2px;opacity:.8;">
-      <span class="sync-dot" style="background:#4ade80;"></span>Conectado con Firebase
-    </div>
+  <!-- Logo centrado -->
+  <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+    <img src="logos-mroh.png" alt="MROH Rionegro" style="height:46px;width:auto;object-fit:contain;max-width:220px;">
   </div>
-  <!-- Logo centro absoluto -->
-  <img src="logos-mroh.png" alt="MROH Rionegro" style="position:absolute;left:50%;transform:translateX(-50%);height:50px;width:auto;object-fit:contain;pointer-events:none;">
   <!-- Usuario derecha -->
   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
     <div class="user-pill" onclick="doLogout()" title="Cerrar sesi&oacute;n">
@@ -562,6 +552,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         <button id="asubt-puntos" data-nav-admin="puntos" onclick="adminSubTab('puntos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#127942; Puntuaci&oacute;n</button>
         <button id="asubt-config" data-nav-admin="config" onclick="adminSubTab('config')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9881;&#65039; Partidos</button>
         <button id="asubt-textos" data-nav-admin="textos" onclick="adminSubTab('textos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9997;&#65039; Textos</button>
+        <button id="asubt-apuestas-usr" data-nav-admin="apuestas-usr" onclick="adminSubTab('apuestas-usr')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#128203; Apuestas</button>
       </div>
     </div>
     <div id="admin-panel-usuarios">
@@ -609,6 +600,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <div class="stat-box"><div class="stat-num" id="st-registrados" style="color:#1e3a6e;">0</div><div class="stat-lbl">Registrados</div></div>
       <div class="stat-box"><div class="stat-num" id="st-asociados" style="color:#1a6b3c;">0</div><div class="stat-lbl">Asociados</div></div>
       <div class="stat-box"><div class="stat-num" id="st-invitados" style="color:#c8972b;">0</div><div class="stat-lbl">Invitados</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-con-apuesta" style="color:#7c3aed;">0</div><div class="stat-lbl">Con apuestas</div></div>
     </div>
       <div id="lista-usuarios"></div>
       <div class="card" style="margin-top:14px;">
@@ -673,6 +665,30 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         <button class="btn btn-primary btn-sm" onclick="saveFechaEliminacion()">&#10003; Guardar configuraci&oacute;n</button>
         <div id="estado-eliminacion" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
       </div>
+    </div>
+    <div id="admin-panel-apuestas-usr" style="display:none;">
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">&#128203; Apuestas por usuario</div>
+          <button id="toggle-apertura-global" onclick="toggleAperturaGlobal()"
+            style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-weight:600;background:#e8f7ed;color:#1a6b3c;border-color:#a3d9b8;">
+            &#128275; Apuestas abiertas (cerrar todo)
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <input type="text" id="filtro-usr-nombre" placeholder="&#128269; Buscar usuario..." oninput="renderApuestasPorUsuario()"
+            style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          <select id="filtro-usr-tipo" onchange="renderApuestasPorUsuario()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:white;">
+            <option value="">Todos los tipos</option>
+            <option value="grupo">Partidos de grupo</option>
+            <option value="campeon">Campe&#243;n</option>
+            <option value="subcampeon">Subcampe&#243;n</option>
+            <option value="tercer_puesto">Tercer puesto</option>
+          </select>
+        </div>
+      </div>
+      <div id="lista-apuestas-por-usuario"></div>
     </div>
     <div id="admin-panel-textos" style="display:none;">
       <div class="card">
