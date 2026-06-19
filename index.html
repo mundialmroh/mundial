@@ -534,10 +534,15 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <div class="stat-box"><div class="stat-num" id="st-partidos">0</div><div class="stat-lbl" id="stat-lbl-partidos">Partidos cubiertos</div></div>
       <div class="stat-box"><div class="stat-num" id="st-con-apuesta-tabla" style="color:#7c3aed;">0</div><div class="stat-lbl">Con apuestas</div></div>
     </div>
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-title">&#128202; Apuestas por partido</div>
-      <div id="apuestas-por-partido"></div>
-    </div>
+    <details class="card" style="margin-bottom:14px;padding:0;overflow:hidden;">
+      <summary style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;">
+        <span class="card-title" style="margin:0;">&#128202; Apuestas por partido</span>
+        <span style="font-size:12px;color:var(--muted);font-weight:600;">Ver detalle &#9660;</span>
+      </summary>
+      <div style="padding:0 20px 16px;">
+        <div id="apuestas-por-partido"></div>
+      </div>
+    </details>
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;">
         <div class="card-title" id="sec-tabla-titulo" style="margin:0;">Clasificaci&oacute;n</div>
