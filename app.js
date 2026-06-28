@@ -132,6 +132,23 @@ const PARTIDOS = [
   {id:"L4",grupo:"Grupo L",local:"Panamá",visitante:"Croacia",fecha:"23 Jun",sede:"Toronto"},
   {id:"L5",grupo:"Grupo L",local:"Croacia",visitante:"Ghana",fecha:"27 Jun",sede:"Filadelfia"},
   {id:"L6",grupo:"Grupo L",local:"Panamá",visitante:"Inglaterra",fecha:"27 Jun",sede:"Nueva York"},
+  // ── DIECISEISAVOS DE FINAL ──
+  {id:"D01",grupo:"16avos",local:"Sudáfrica",visitante:"Canadá",fecha:"28 Jun",sede:"Los Ángeles"},
+  {id:"D02",grupo:"16avos",local:"Brasil",visitante:"Japón",fecha:"29 Jun",sede:"Houston"},
+  {id:"D03",grupo:"16avos",local:"Alemania",visitante:"Paraguay",fecha:"29 Jun",sede:"Boston"},
+  {id:"D04",grupo:"16avos",local:"Países Bajos",visitante:"Marruecos",fecha:"29 Jun",sede:"Monterrey"},
+  {id:"D05",grupo:"16avos",local:"Costa de Marfil",visitante:"Noruega",fecha:"30 Jun",sede:"Dallas"},
+  {id:"D06",grupo:"16avos",local:"Francia",visitante:"Suecia",fecha:"30 Jun",sede:"Nueva York"},
+  {id:"D07",grupo:"16avos",local:"México",visitante:"Ecuador",fecha:"30 Jun",sede:"Ciudad de México"},
+  {id:"D08",grupo:"16avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"30 Jun",sede:"Por confirmar"},
+  {id:"D09",grupo:"16avos",local:"Inglaterra",visitante:"Senegal",fecha:"1 Jul",sede:"Atlanta"},
+  {id:"D10",grupo:"16avos",local:"Bélgica",visitante:"Corea del Sur",fecha:"1 Jul",sede:"Seattle"},
+  {id:"D11",grupo:"16avos",local:"Estados Unidos",visitante:"Bosnia y Herz.",fecha:"1 Jul",sede:"San Francisco"},
+  {id:"D12",grupo:"16avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"1 Jul",sede:"Por confirmar"},
+  {id:"D13",grupo:"16avos",local:"España",visitante:"Austria",fecha:"2 Jul",sede:"Los Ángeles"},
+  {id:"D14",grupo:"16avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"2 Jul",sede:"Por confirmar"},
+  {id:"D15",grupo:"16avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"3 Jul",sede:"Por confirmar"},
+  {id:"D16",grupo:"16avos",local:"Colombia",visitante:"Ghana",fecha:"3 Jul",sede:"Kansas City"},
 ];
 
 const EQUIPOS = [...new Set(PARTIDOS.flatMap(p=>[p.local,p.visitante]))].sort();
