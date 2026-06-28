@@ -179,6 +179,7 @@ let unsubApuestas = null;
 let _cachedUsuarios   = null;
 let _horariosPartidos = {}; // { partidoId: isoString } hora de inicio de cada partido  // cache de usuarios Firestore
 let _cachedApuestasAd = null;  // cache de apuestas para admin
+let tablaApuestasCache = [];   // cache de apuestas para tabla (usuarios normales)
 let _cacheTs          = 0;     // timestamp del último fetch
 const CACHE_TTL       = 60000; // 60 segundos de vida del caché
 
@@ -906,7 +907,7 @@ function renderDieciseis() {
         ? (tiempo ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9203; '+tiempo+'</span>'
                   : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9989; ABIERTO</span>')
         : '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#128683; CERRADO</span>';
-      const onclick = esPorConfirmar ? '' : ('onclick="abrirModal(\'' + p.id + '\')"');
+      const onclick = esPorConfirmar ? '' : ('onclick="abrirApuestaPartido(\'' + p.id + '\')"');
       html += '<div class="partido-card '+(res?'con-resultado':'')+'" '+onclick+'>';
       html += '<div class="p-grupo" style="display:flex;justify-content:space-between;align-items:center;"><span>16avos &middot; '+p.sede+'</span>'+badgeHtml+'</div>';
       html += '<div class="p-match">'+(esPorConfirmar ? '&#9203; Por confirmar' : p.local+' vs '+p.visitante)+'</div>';
@@ -2042,7 +2043,7 @@ function generarLinkInvitacionSimple() {
   return base + '?ref=' + ref;
 }
 
-function abrirModalInvitar() {
+function abrirApuestaPartidoInvitar() {
   document.getElementById('modal-invitar').style.display = 'flex';
   // Clear fields
   ['invitar-nombre','invitar-email','invitar-tel'].forEach(id => {
