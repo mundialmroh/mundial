@@ -574,6 +574,7 @@ function showTab(id, btn) {
   if(id==="admin"){renderUsuarios();cargarLinkUnico();}
   if(id==="partidos")  renderPartidos();
   if(id==="admin")     { adminSubTab('usuarios'); }
+  if(id==="dieciseis") { renderDieciseis(); }
 }
 
 function updateTipo() {
@@ -875,6 +876,47 @@ function renderApuestasPorPartido() {
       <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:${color};min-width:36px;text-align:right;">${n}</div>
     </div>`;
   }).join('');
+}
+
+function renderDieciseis() {
+  const container = document.getElementById('partidos-16vos-container');
+  if (!container) return;
+  const partidos16 = PARTIDOS.filter(p => p.grupo === '16avos');
+  if (!partidos16.length) {
+    container.innerHTML = '<div style="color:var(--muted);padding:12px 0;">Sin partidos cargados.</div>';
+    return;
+  }
+  const porFecha = {};
+  partidos16.forEach(p => {
+    if (!porFecha[p.fecha]) porFecha[p.fecha] = [];
+    porFecha[p.fecha].push(p);
+  });
+  let html = '';
+  Object.entries(porFecha).forEach(([fecha, ps]) => {
+    html += '<div class="fecha-bloque">';
+    html += '<div class="fecha-header"><div class="fecha-badge">&#128197; '+fecha+'</div><div class="fecha-line"></div><div style="font-size:12px;color:var(--muted);white-space:nowrap;">'+ps.length+' partido'+(ps.length!==1?'s':'')+'</div></div>';
+    html += '<div class="partidos-grid">';
+    ps.forEach(p => {
+      const abierto = estaAbierto(p.id, 'elim');
+      const tiempo  = tiempoRestante(p.id, 'elim');
+      const res = resultados[p.id];
+      const miApuesta = apuestas.find(a => a.partidoId === p.id);
+      const esPorConfirmar = p.local === 'Por confirmar';
+      const badgeHtml = abierto
+        ? (tiempo ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9203; '+tiempo+'</span>'
+                  : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9989; ABIERTO</span>')
+        : '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#128683; CERRADO</span>';
+      const onclick = esPorConfirmar ? '' : ('onclick="abrirModal(\'' + p.id + '\')"');
+      html += '<div class="partido-card '+(res?'con-resultado':'')+'" '+onclick+'>';
+      html += '<div class="p-grupo" style="display:flex;justify-content:space-between;align-items:center;"><span>16avos &middot; '+p.sede+'</span>'+badgeHtml+'</div>';
+      html += '<div class="p-match">'+(esPorConfirmar ? '&#9203; Por confirmar' : p.local+' vs '+p.visitante)+'</div>';
+      if (res) html += '<div class="p-res">'+(res.golesLocal??'?')+' - '+(res.golesVisitante??'?')+'</div>';
+      if (miApuesta && !esPorConfirmar) html += '<div style="font-size:11px;color:var(--verde);margin-top:4px;">&#10003; Apostado: '+miApuesta.golesLocal+'-'+miApuesta.golesVisitante+'</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  container.innerHTML = html;
 }
 
 function renderApuestas() {

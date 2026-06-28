@@ -418,6 +418,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
   <button data-nav="apuestas" onclick="showTab('apuestas',this)">&#128203; Apuestas</button>
   <button data-nav="resultados" onclick="showTab('resultados',this)">&#127919; Resultados</button>
   <button data-nav="tabla" onclick="showTab('tabla',this)">&#127885; Tabla</button>
+  <button data-nav="dieciseis" onclick="showTab('dieciseis',this)">&#9889; 16vos</button>
   <button id="nav-admin" onclick="showTab('admin',this)" style="display:none;">&#9881; Admin <span class="admin-badge">Admin</span></button>
 </nav>
 
@@ -551,6 +552,14 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <div id="tabla-ranking"></div>
     </div>
 
+  </div>
+
+  <!-- 16VOS -->
+  <div class="panel" id="tab-dieciseis">
+    <div class="card">
+      <div class="card-title">&#9889; Dieciseisavos de Final</div>
+      <div id="partidos-16vos-container"></div>
+    </div>
   </div>
 
   <!-- ADMIN -->
