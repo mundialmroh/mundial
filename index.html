@@ -315,6 +315,18 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 .app-footer .footer-logos{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
 .app-footer .footer-logos img{height:22px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;}
 </style>
+<script>
+function aceptarAutorizacion() {
+  localStorage.setItem('mroh_datos_autorizado', '1');
+  var modal = document.getElementById('modal-autorizacion');
+  if (modal) modal.style.display = 'none';
+}
+function verificarAutorizacion() {
+  var autorizado = localStorage.getItem('mroh_datos_autorizado');
+  var modal = document.getElementById('modal-autorizacion');
+  if (autorizado === '1') { if (modal) modal.style.display = 'none'; }
+}
+</script>
 </head>
 <body>
 
