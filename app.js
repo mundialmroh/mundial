@@ -1,7 +1,6 @@
 // FIREBASE CONFIG - inicializado en el bloque de scripts del head
 
 // CONSTANTES
-var functions = typeof firebase !== "undefined" ? firebase.functions() : null;
 const ADMIN_CEDULA       = "71313689";
 const ADMIN_EMAIL        = ADMIN_CEDULA + "@mroh.app";
 const API_KEY_FOOTBALL   = "8ccb25f8512b4cc51e437eae1b0edca7";
