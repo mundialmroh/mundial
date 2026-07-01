@@ -15,7 +15,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 <script>
 // Inicializar Firebase inmediatamente después de cargar los SDKs
 const firebaseConfig = {
@@ -29,9 +28,8 @@ const firebaseConfig = {
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
 }
-const auth      = firebase.auth();
-const db        = firebase.firestore();
-const functions = firebase.functions();
+const auth = firebase.auth();
+const db   = firebase.firestore();
 // Init EmailJS
 emailjs.init("QuhqmKCi-H5CYLYXt");
 </script>
@@ -315,18 +313,6 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 .app-footer .footer-logos{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
 .app-footer .footer-logos img{height:22px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;}
 </style>
-<script>
-function aceptarAutorizacion() {
-  localStorage.setItem('mroh_datos_autorizado', '1');
-  var modal = document.getElementById('modal-autorizacion');
-  if (modal) modal.style.display = 'none';
-}
-function verificarAutorizacion() {
-  var autorizado = localStorage.getItem('mroh_datos_autorizado');
-  var modal = document.getElementById('modal-autorizacion');
-  if (autorizado === '1') { if (modal) modal.style.display = 'none'; }
-}
-</script>
 </head>
 <body>
 
@@ -686,6 +672,65 @@ function verificarAutorizacion() {
         <button class="btn btn-primary btn-sm" onclick="saveFechaEliminacion()">&#10003; Guardar configuraci&oacute;n</button>
         <div id="estado-eliminacion" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
       </div>
+      <div class="card" style="margin-top:0;">
+        <div class="card-title">&#9200; Horarios eliminatorias</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Configura el horario de inicio de cada partido eliminatorio. El sistema cerrará apuestas 30 minutos antes automáticamente.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px;">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">ID Partido</label>
+            <select id="horario-elim-id" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
+              <optgroup label="16avos">
+                <option value="D01">D01 - Sudáfrica vs Canadá</option>
+                <option value="D02">D02 - Brasil vs Japón</option>
+                <option value="D03">D03 - Alemania vs Paraguay</option>
+                <option value="D04">D04 - Países Bajos vs Marruecos</option>
+                <option value="D05">D05 - Costa de Marfil vs Noruega</option>
+                <option value="D06">D06 - Francia vs Suecia</option>
+                <option value="D07">D07 - México vs Ecuador</option>
+                <option value="D08">D08 - Inglaterra vs Rep. Dem. Congo</option>
+                <option value="D09">D09 - Bélgica vs Senegal</option>
+                <option value="D10">D10 - EE.UU. vs Bosnia</option>
+                <option value="D11">D11 - España vs Argelia</option>
+                <option value="D12">D12 - Portugal vs Croacia</option>
+                <option value="D13">D13 - Suiza vs Irán</option>
+                <option value="D14">D14 - Australia vs Egipto</option>
+                <option value="D15">D15 - Argentina vs Cabo Verde</option>
+                <option value="D16">D16 - Colombia vs Ghana</option>
+              </optgroup>
+              <optgroup label="8avos">
+                <option value="O01">O01 - 8avos #1</option>
+                <option value="O02">O02 - 8avos #2</option>
+                <option value="O03">O03 - 8avos #3</option>
+                <option value="O04">O04 - 8avos #4</option>
+                <option value="O05">O05 - 8avos #5</option>
+                <option value="O06">O06 - 8avos #6</option>
+                <option value="O07">O07 - 8avos #7</option>
+                <option value="O08">O08 - 8avos #8</option>
+              </optgroup>
+              <optgroup label="Cuartos">
+                <option value="Q01">Q01 - Cuartos #1</option>
+                <option value="Q02">Q02 - Cuartos #2</option>
+                <option value="Q03">Q03 - Cuartos #3</option>
+                <option value="Q04">Q04 - Cuartos #4</option>
+              </optgroup>
+              <optgroup label="Semifinales">
+                <option value="S01">S01 - Semifinal #1</option>
+                <option value="S02">S02 - Semifinal #2</option>
+              </optgroup>
+              <optgroup label="Final">
+                <option value="F01">F01 - Tercer puesto</option>
+                <option value="F02">F02 - Final</option>
+              </optgroup>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Hora Colombia</label>
+            <input type="datetime-local" id="horario-elim-hora" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="guardarHorarioElim()" style="white-space:nowrap;">&#10003; Guardar</button>
+        </div>
+        <div id="lista-horarios-elim" style="font-size:12px;color:var(--muted);"></div>
+      </div>
     </div>
     <div id="admin-panel-textos" style="display:none;">
       <div class="card">
@@ -731,7 +776,7 @@ function verificarAutorizacion() {
 
 <div class="toast" id="toast"></div>
 
-<script src="./app.js?v=20260701"></script>
+<script src="./app.js"></script>
 
 <!-- MODAL: CARGUE MASIVO -->
 <div id="modal-cargue" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
