@@ -132,6 +132,23 @@ const PARTIDOS = [
   {id:"L4",grupo:"Grupo L",local:"Panamá",visitante:"Croacia",fecha:"23 Jun",sede:"Toronto"},
   {id:"L5",grupo:"Grupo L",local:"Croacia",visitante:"Ghana",fecha:"27 Jun",sede:"Filadelfia"},
   {id:"L6",grupo:"Grupo L",local:"Panamá",visitante:"Inglaterra",fecha:"27 Jun",sede:"Nueva York"},
+  // ── DIECISEISAVOS DE FINAL ──
+  {id:"D01",grupo:"16avos",local:"Sudáfrica",visitante:"Canadá",fecha:"28 Jun",sede:"Los Ángeles"},
+  {id:"D02",grupo:"16avos",local:"Brasil",visitante:"Japón",fecha:"29 Jun",sede:"Houston"},
+  {id:"D03",grupo:"16avos",local:"Alemania",visitante:"Paraguay",fecha:"29 Jun",sede:"Boston"},
+  {id:"D04",grupo:"16avos",local:"Países Bajos",visitante:"Marruecos",fecha:"29 Jun",sede:"Monterrey"},
+  {id:"D05",grupo:"16avos",local:"Costa de Marfil",visitante:"Noruega",fecha:"30 Jun",sede:"Dallas"},
+  {id:"D06",grupo:"16avos",local:"Francia",visitante:"Suecia",fecha:"30 Jun",sede:"Nueva York"},
+  {id:"D07",grupo:"16avos",local:"México",visitante:"Ecuador",fecha:"30 Jun",sede:"Ciudad de México"},
+  {id:"D08",grupo:"16avos",local:"Inglaterra",visitante:"Rep. Dem. Congo",fecha:"1 Jul",sede:"Atlanta"},
+  {id:"D09",grupo:"16avos",local:"Bélgica",visitante:"Senegal",fecha:"1 Jul",sede:"Seattle"},
+  {id:"D10",grupo:"16avos",local:"Estados Unidos",visitante:"Bosnia y Herz.",fecha:"1 Jul",sede:"San Francisco"},
+  {id:"D11",grupo:"16avos",local:"España",visitante:"Argelia",fecha:"2 Jul",sede:"Los Ángeles"},
+  {id:"D12",grupo:"16avos",local:"Portugal",visitante:"Croacia",fecha:"2 Jul",sede:"Kansas City"},
+  {id:"D13",grupo:"16avos",local:"Suiza",visitante:"Irán",fecha:"3 Jul",sede:"Vancouver"},
+  {id:"D14",grupo:"16avos",local:"Australia",visitante:"Egipto",fecha:"3 Jul",sede:"Dallas"},
+  {id:"D15",grupo:"16avos",local:"Argentina",visitante:"Cabo Verde",fecha:"3 Jul",sede:"Miami"},
+  {id:"D16",grupo:"16avos",local:"Colombia",visitante:"Ghana",fecha:"3 Jul",sede:"Kansas City"},
 ];
 
 const EQUIPOS = [...new Set(PARTIDOS.flatMap(p=>[p.local,p.visitante]))].sort();
@@ -162,6 +179,7 @@ let unsubApuestas = null;
 let _cachedUsuarios   = null;
 let _horariosPartidos = {}; // { partidoId: isoString } hora de inicio de cada partido  // cache de usuarios Firestore
 let _cachedApuestasAd = null;  // cache de apuestas para admin
+let tablaApuestasCache = [];   // cache de apuestas para tabla
 let _cacheTs          = 0;     // timestamp del último fetch
 const CACHE_TTL       = 60000; // 60 segundos de vida del caché
 
@@ -194,21 +212,23 @@ async function cargarCriterios() {
 let configPartidos = {}; // { partidoId: { cierreISO, tarjetas, esquinas } }
 let configGlobal   = {}; // { cierreGrupos, cierreElim, ocultarApuestas }
 
+function horaColombiaToDate(iso) {
+  if (iso.endsWith('Z') || iso.includes('+') || iso.slice(-6,-5) === '-') return new Date(iso);
+  return new Date(iso + '-05:00');
+}
+
 function estaAbierto(partidoId, tipo) {
   const cfg = configPartidos[partidoId];
   const ahora = new Date();
-  // Cierre individual del partido
   if (cfg && cfg.cierreISO) return new Date(cfg.cierreISO) > ahora;
-  // Cierre global por tipo
   const cierreGlobal = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
   if (cierreGlobal) return new Date(cierreGlobal) > ahora;
-  // Cierre automático: 30 min antes del inicio del partido
   const horaInicio = _horariosPartidos[partidoId];
   if (horaInicio) {
-    const cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    const cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
     return cierre > ahora;
   }
-  return true; // sin cierre configurado = abierto
+  return true;
 }
 
 function tiempoRestante(partidoId, tipo) {
@@ -220,10 +240,9 @@ function tiempoRestante(partidoId, tipo) {
     const cg = tipo === 'grupo' ? configGlobal.cierreGrupos : configGlobal.cierreElim;
     if (cg) cierre = new Date(cg);
   }
-  // Cierre automático: 30 min antes del inicio del partido
   if (!cierre) {
     const horaInicio = _horariosPartidos[partidoId];
-    if (horaInicio) cierre = new Date(new Date(horaInicio).getTime() - 30 * 60 * 1000);
+    if (horaInicio) cierre = new Date(horaColombiaToDate(horaInicio).getTime() - 30 * 60 * 1000);
   }
   if (!cierre) return null;
   const diff = cierre - ahora;
@@ -310,8 +329,8 @@ auth.onAuthStateChanged(async user => {
   const overlay = document.getElementById("loading-overlay");
   if (overlay) overlay.style.display = "none";
   if (user) {
-    // Cargar perfil de Firestore
-    const snap = await db.collection("usuarios").doc(user.uid).get();
+    // Cargar perfil desde servidor
+    const snap = await db.collection("usuarios").doc(user.uid).get({ source: "server" });
     const perfil = snap.exists ? snap.data() : {};
     currentUser = {
       uid:              user.uid,
@@ -345,8 +364,8 @@ function showApp() {
   document.getElementById("main-content").style.display  = "";
   actualizarHeaderUsuario();
   renderPtsInfo();
-  // Cargar config de partidos temprano para que los campos de desempate aparezcan
-  cargarConfigPartidos().then(() => renderPartidos());
+  // Cargar datos tras autenticación
+  cargarResultados();
   suscribirApuestas();
 
   // Escuchar cambios de rol en tiempo real
@@ -556,6 +575,7 @@ function showTab(id, btn) {
   if(id==="admin"){renderUsuarios();cargarLinkUnico();}
   if(id==="partidos")  renderPartidos();
   if(id==="admin")     { adminSubTab('usuarios'); }
+  if(id==="dieciseis") { renderDieciseis(); }
 }
 
 function updateTipo() {
@@ -827,6 +847,78 @@ function preselectPartido(pid) {
 }
 
 // RENDER APUESTAS
+function renderDieciseis() {
+  const container = document.getElementById('partidos-16vos-container');
+  if (!container) return;
+  const partidos16 = PARTIDOS.filter(p => p.grupo === '16avos');
+  if (!partidos16.length) {
+    container.innerHTML = '<div style="color:var(--muted);padding:12px 0;">Sin partidos cargados.</div>';
+    return;
+  }
+  const porFecha = {};
+  partidos16.forEach(p => {
+    if (!porFecha[p.fecha]) porFecha[p.fecha] = [];
+    porFecha[p.fecha].push(p);
+  });
+  let html = '';
+  const fechas = Object.keys(porFecha);
+  for (let fi = 0; fi < fechas.length; fi++) {
+    const fecha = fechas[fi];
+    const ps = porFecha[fecha];
+    html += '<div class="fecha-bloque">';
+    html += '<div class="fecha-header"><div class="fecha-badge">&#128197; ' + fecha + '</div>';
+    html += '<div class="fecha-line"></div>';
+    html += '<div style="font-size:12px;color:var(--muted);white-space:nowrap;">' + ps.length + ' partido' + (ps.length!==1?'s':'') + '</div></div>';
+    html += '<div class="partidos-grid">';
+    for (let pi = 0; pi < ps.length; pi++) {
+      const p = ps[pi];
+      const abierto = estaAbierto(p.id, 'elim');
+      const tiempo  = tiempoRestante(p.id, 'elim');
+      const res = resultados[p.id];
+      const miApuesta = apuestas.find(a => a.partidoId === p.id);
+      let badge = '';
+      if (abierto) {
+        badge = tiempo
+          ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9203; ' + tiempo + '</span>'
+          : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9989; ABIERTO</span>';
+      } else {
+        badge = '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#128683; CERRADO</span>';
+      }
+      const claseRes = res ? ' con-resultado' : '';
+      html += '<div class="partido-card' + claseRes + '" onclick="abrirApuestaPartido(&quot;' + p.id + '&quot;)">';
+      html += '<div class="p-grupo" style="display:flex;justify-content:space-between;align-items:center;">';
+      html += '<span>16avos &middot; ' + p.sede + '</span>' + badge + '</div>';
+      html += '<div class="p-match">' + p.local + ' vs ' + p.visitante + '</div>';
+      if (res) html += '<div class="p-res">' + (res.local !== undefined ? res.local : '?') + ' - ' + (res.visitante !== undefined ? res.visitante : '?') + '</div>';
+      if (miApuesta) html += '<div style="font-size:11px;color:var(--verde);margin-top:4px;">&#10003; Apostado: ' + miApuesta.golLocal + '-' + miApuesta.golVisitante + '</div>';
+      html += '</div>';
+    }
+    html += '</div></div>';
+  }
+  container.innerHTML = html;
+}
+
+function renderApuestasPorPartido() {
+  const container = document.getElementById('apuestas-por-partido');
+  if (!container) return;
+  const EXCL = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
+  const conteo = {};
+  apuestas.forEach(a => { if (a.tipo==='grupo' && a.partidoId && !EXCL.has(a.partidoId)) conteo[a.partidoId] = (conteo[a.partidoId]||0)+1; });
+  const partidos = PARTIDOS.filter(p => !EXCL.has(p.id) && p.grupo !== '16avos');
+  if (!partidos.length) { container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px 0;">Sin datos</div>'; return; }
+  const maxVal = Math.max(...partidos.map(p => conteo[p.id]||0), 1);
+  container.innerHTML = partidos.map(p => {
+    const n = conteo[p.id]||0;
+    const pct = Math.round((n/maxVal)*100);
+    const color = n===0?'var(--border)':n>=maxVal*0.8?'var(--verde)':n>=maxVal*0.4?'var(--oro)':'#e57373';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);">'+
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);min-width:28px;">'+p.id+'</div>'+
+      '<div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+p.local+' vs '+p.visitante+'</div>'+
+      '<div style="margin-top:3px;background:var(--border);border-radius:4px;height:6px;overflow:hidden;"><div style="width:'+pct+'%;height:100%;background:'+color+';border-radius:4px;"></div></div></div>'+
+      '<div style="font-family:Bebas Neue,sans-serif;font-size:20px;color:'+color+';min-width:36px;text-align:right;">'+n+'</div></div>';
+  }).join('');
+}
+
 function renderApuestas() {
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   const grupos   = [...new Set(apuestas.filter(a=>a.grupo).map(a=>a.grupo))];
@@ -1053,7 +1145,8 @@ async function cargarResultados() {
     db.collection("resultados").get(),
     cargarConfigPartidos(),
     cargarTextos(),
-    cargarCriterios()
+    cargarCriterios(),
+    cargarHorarios()
   ]);
   snapRes.forEach(doc => { resultados[doc.id] = doc.data(); });
   // Estas dependen de datos cargados arriba
@@ -1068,6 +1161,9 @@ async function renderTabla() {
   const personas = [...new Set(apuestas.map(a=>a.nombre))];
   document.getElementById("st-partic").textContent   = personas.length;
   document.getElementById("st-partidos").textContent = new Set(apuestas.filter(a=>a.partidoId).map(a=>a.partidoId)).size;
+  const elCon = document.getElementById("st-con-apuesta-tabla");
+  if (elCon) { const EXCL=new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']); elCon.textContent = new Set(apuestas.filter(a=>a.uid&&a.tipo==='grupo'&&!EXCL.has(a.partidoId)).map(a=>a.uid)).size; }
+  renderApuestasPorPartido();
 
   const container = document.getElementById("tabla-ranking");
   container.innerHTML = '<div class="empty" style="padding:24px">Cargando...</div>';
@@ -1095,17 +1191,20 @@ async function renderTabla() {
   let todosUsuarios = [];
   try {
     if (esAdmin) {
-      todosUsuarios = await getUsuarios();
+      await cargarUsuariosCache();
+      todosUsuarios = _cachedUsuarios.map(u => ({uid: u.id || u.uid, ...u}));
       const total     = todosUsuarios.length;
       const invitados = todosUsuarios.filter(u => u.invitadoPor).length;
       const asociados = total - invitados;
       const stReg = document.getElementById('st-registrados');
       const stInv = document.getElementById('st-invitados');
       const stAso = document.getElementById('st-asociados');
+      const stCon = document.getElementById('st-con-apuesta');
       if (stReg) stReg.textContent = total;
       if (stInv) stInv.textContent = invitados;
       if (stAso) stAso.textContent = asociados;
       document.getElementById("st-partic").textContent = total;
+      if (stCon) { const conApuesta = new Set((_cachedApuestasAd||[]).map(a => a.uid)).size; stCon.textContent = conApuesta; }
     } else {
       // Usar cache de apuestas para tabla (cargado al abrir pestaña)
       const fuente = tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas;
@@ -1137,10 +1236,11 @@ async function renderTabla() {
     .filter(u => u.rol !== 'admin')
     .map(u => {
       // Si hay filtro de partido, solo contar puntos de ese partido
-      const fuenteApuestas = esAdmin ? apuestas : (tablaApuestasCache.length > 0 ? tablaApuestasCache : apuestas);
+      const fuenteApuestas = esAdmin ? (_cachedApuestasAd || apuestas) : apuestas;
+      const PARTIDOS_EXCLUIDOS = new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']);
       const bets = filtroPartido
-        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido)
-        : fuenteApuestas.filter(a => a.uid === u.uid);
+        ? fuenteApuestas.filter(a => a.uid === u.uid && a.partidoId === filtroPartido && !PARTIDOS_EXCLUIDOS.has(a.partidoId))
+        : fuenteApuestas.filter(a => a.uid === u.uid && !PARTIDOS_EXCLUIDOS.has(a.partidoId));
       const fases = filtroPartido ? {} : calcPuntosPorFase(bets);
       const total = bets.reduce((s,a) => s+calcPuntos(a), 0);
       const nombre = u.nombre || u.email;
@@ -1319,7 +1419,7 @@ async function eliminarCriterio(i) {
 
 // ADMIN USUARIOS
 function adminSubTab(tab) {
-  ["usuarios","puntos","config","textos"].forEach(t => {
+  ["usuarios","puntos","config","textos","apuestas-usr"].forEach(t => {
     document.getElementById("admin-panel-"+t).style.display = tab===t?"block":"none";
     const base = "flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;white-space:nowrap;border-bottom:2px solid ";
     const el = document.getElementById("asubt-"+t);
@@ -1328,8 +1428,10 @@ function adminSubTab(tab) {
   if(tab==="puntos")  renderCriterios();
   if(tab==="config")  { renderConfigPartidos(); initConfigFiltros(); loadCierreGlobalUI(); }
   if(tab==="textos")  renderTextos();
-  if(tab==="usuarios")renderUsuarios();
-  if(tab==="config")   cargarHorariosElim();
+  if(tab==="usuarios")    renderUsuarios();
+  if(tab==="apuestas-usr") renderApuestasPorUsuario();
+  if(tab==="dieciseis")    renderDieciseis();
+  if(tab==="config")       cargarHorariosElim();
 }
 
 function initConfigFiltros() {
@@ -1538,6 +1640,7 @@ function renderListaUsuarios(users) {
             <button class="btn btn-sm ${isAdmin?"btn-outline":"btn-gold"}" onclick="toggleAdmin('${u.uid}','${u.nombre}','${u.rol}')" title="${isAdmin?"Quitar admin":"Hacer admin"}">
               ${isAdmin?"👤 Quitar admin":"👑 Hacer admin"}
             </button>
+            <button class="btn btn-outline btn-sm" onclick="resetPassword('${u.uid}','${u.nombre}','${u.email||u.celular}')" title="Restablecer contraseña">🔑</button>
             <button class="btn btn-danger btn-sm" onclick="eliminarUsuario('${u.uid}','${u.nombre}')" title="Eliminar">🗑</button>
           `:'<span style="font-size:11px;color:var(--muted);">Tú</span>'}
         </div>
@@ -1547,13 +1650,17 @@ function renderListaUsuarios(users) {
 }
 
 async function toggleAdmin(uid, nombre, rolActual) {
-  const nuevoRol = rolActual === "admin" ? "user" : "admin";
+  const rolLimpio = (rolActual === "admin") ? "admin" : "user";
+  const nuevoRol = rolLimpio === "admin" ? "user" : "admin";
   const accion   = nuevoRol === "admin" ? "hacer admin" : "quitar rol de admin";
   if (!confirm(`¿Quieres ${accion} a ${nombre}?`)) return;
   try {
     await db.collection("usuarios").doc(uid).update({ rol: nuevoRol });
+    const ver = await db.collection("usuarios").doc(uid).get();
+    if (ver.data()?.rol !== nuevoRol) { toast("Error: el rol no se guardó"); return; }
     toast(`✓ ${nombre} ahora es ${nuevoRol === "admin" ? "administrador" : "participante"}`);
-    renderUsuarios();
+    invalidarCache();
+    renderUsuarios(true);
   } catch(e) { toast("Error: " + e.message); }
 }
 
@@ -1563,13 +1670,26 @@ async function eliminarUsuario(uid, nombre) {
   toast("Usuario eliminado"); invalidarCache(); renderUsuarios();
 }
 
+async function resetPassword(uid, nombre, emailOCedula) {
+  const cedula = (emailOCedula || '').split('@')[0];
+  if (!cedula) { toast('No se pudo obtener la cédula'); return; }
+  if (!confirm('¿Restablecer contraseña de ' + nombre + '?\nContraseña temporal: ' + cedula)) return;
+  try {
+    toast('⏳ Restableciendo...');
+    const resetFn = firebase.functions().httpsCallable('resetUserPassword');
+    await resetFn({ uid: uid, nuevaPass: cedula });
+    await db.collection('usuarios').doc(uid).update({ debeActualizarPass: true });
+    toast('✓ Contraseña de ' + nombre + ' restablecida a: ' + cedula);
+  } catch(e) { toast('Error: ' + (e.message || 'No se pudo restablecer')); }
+}
+
 async function guardarHorarioElim() {
   const id   = document.getElementById('horario-elim-id').value;
   const hora = document.getElementById('horario-elim-hora').value;
   if (!id || !hora) { toast('Selecciona partido y hora'); return; }
-  // Convertir datetime-local a formato ISO sin zona (se interpreta como Colombia en el código)
-  const iso = hora.replace('T', 'T').slice(0, 16) + ':00';
+  const iso = hora.slice(0, 16) + ':00';
   await db.collection('horarios').doc(id).set({ horaInicio: iso }, { merge: true });
+  _horariosPartidos[id] = iso;
   toast('✓ Horario guardado: ' + id + ' -> ' + iso);
   cargarHorariosElim();
 }
@@ -1577,17 +1697,14 @@ async function guardarHorarioElim() {
 async function cargarHorariosElim() {
   const container = document.getElementById('lista-horarios-elim');
   if (!container) return;
-  const snap = await db.collection('horarios').get();
-  const elim = snap.docs
-    .filter(d => !['A1','A2','A3','A4','A5','A6','B1','B2','B3','B4','B5','B6','C1','C2','C3','C4','C5','C6','D1','D2','D3','D4','D5','D6','E1','E2','E3','E4','E5','E6','F1','F2','F3','F4','F5','F6','G1','G2','G3','G4','G5','G6','H1','H2','H3','H4','H5','H6','I1','I2','I3','I4','I5','I6','J1','J2','J3','J4','J5','J6','K1','K2','K3','K4','K5','K6','L1','L2','L3','L4','L5','L6'].includes(d.id))
-    .sort((a,b) => a.id.localeCompare(b.id));
-  if (!elim.length) { container.innerHTML = 'Sin horarios eliminatorias guardados.'; return; }
-  container.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">' +
-    elim.map(d => {
-      const h = d.data().horaInicio || '';
-      return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;">' +
-        '<span style="font-weight:700;color:var(--verde);">' + d.id + '</span> ' + h + '</div>';
-    }).join('') + '</div>';
+  try {
+    const snap = await db.collection('horarios').get();
+    const gruposIds = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','B4','B5','B6','C1','C2','C3','C4','C5','C6','D1','D2','D3','D4','D5','D6','E1','E2','E3','E4','E5','E6','F1','F2','F3','F4','F5','F6','G1','G2','G3','G4','G5','G6','H1','H2','H3','H4','H5','H6','I1','I2','I3','I4','I5','I6','J1','J2','J3','J4','J5','J6','K1','K2','K3','K4','K5','K6','L1','L2','L3','L4','L5','L6'];
+    const elim = snap.docs.filter(d => !gruposIds.includes(d.id)).sort((a,b) => a.id.localeCompare(b.id));
+    if (!elim.length) { container.innerHTML = 'Sin horarios eliminatorias guardados.'; return; }
+    container.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">' +
+      elim.map(d => '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;"><span style="font-weight:700;color:var(--verde);">' + d.id + '</span> ' + (d.data().horaInicio||'') + '</div>').join('') + '</div>';
+  } catch(e) { container.innerHTML = 'Error: ' + e.message; }
 }
 
 function enviarWhatsApp(celular, nombre) {
@@ -2809,7 +2926,7 @@ async function exportXLSX(){
 
   // ── Hoja 3: Usuarios registrados ──
   try {
-    const snapUsers = await getUsuarios();
+    await cargarUsuariosCache(); const snapUsers = _cachedUsuarios;
     const hdUsers = ["#","Nombre","Correo","Celular","Rol","Tipo","Apuestas","Puntos"];
     const rowsUsers = snapUsers.map((u,i) => {
       const bets = apuestas.filter(a=>a.uid===u.uid);
@@ -2890,11 +3007,13 @@ function renderApuestasPorUsuario() {
 
       const bg = tieneResultado ? (acerto ? '#e8f7ed' : '#fef0f0') : 'var(--bg)';
       const border = tieneResultado ? (acerto ? '#a3d9b8' : '#fecaca') : 'var(--border)';
+      const fechaReg = a.ts ? a.ts.toString().slice(0,16) : '';
       return `<div style="background:${bg};border:1px solid ${border};border-radius:10px;padding:8px 10px;min-width:110px;max-width:140px;flex:0 0 auto;">
         <div style="font-size:10px;color:var(--muted);font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${titulo}">${titulo}</div>
         <div style="font-size:14px;font-weight:700;color:var(--verde);">${detalle}</div>
         ${desempateHtml ? `<div style="margin-top:4px;">${desempateHtml}</div>` : ''}
         ${p > 0 ? `<div style="font-size:10px;color:#1a6b3c;font-weight:700;margin-top:4px;">+${p} pts</div>` : ''}
+        ${fechaReg ? `<div style="font-size:9px;color:var(--muted);margin-top:3px;">📅 ${fechaReg}</div>` : ''}
       </div>`;
     }).join('');
 
@@ -3027,7 +3146,6 @@ document.addEventListener('DOMContentLoaded', () => {
   verificarAutorizacion();
   init();
   updateTipo();
-  cargarResultados();
   // Fallback: si onAuthStateChanged no responde en 6s, mostrar login
   setTimeout(() => {
     const overlay = document.getElementById('loading-overlay');

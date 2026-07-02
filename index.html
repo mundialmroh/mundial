@@ -15,6 +15,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 <script>
 // Inicializar Firebase inmediatamente después de cargar los SDKs
 const firebaseConfig = {
@@ -143,11 +144,8 @@ h1,h2{font-family:"Bebas Neue",sans-serif;letter-spacing:.04em;}
 .header h1{font-size:20px;color:white;}
 .header-sub{font-size:11px;opacity:.75;margin-top:2px;}
 @media(max-width:700px){
-  .header{flex-wrap:wrap;padding:8px 12px;gap:4px;}
-  .header > div:first-child{flex:1;min-width:0;}
-  .header > div:first-child h1{font-size:14px !important;}
-  .header > div:first-child .header-sub{font-size:10px;}
-  .header-logo-center{position:static !important;transform:none !important;left:auto !important;height:32px !important;width:auto !important;max-width:150px !important;order:3;margin:0 auto;}
+  .header{flex-wrap:nowrap;padding:8px 12px;gap:4px;align-items:center;}
+  .header > div:first-child img{height:34px !important;max-width:160px !important;}
   .header > div:last-child{flex-shrink:0;}
 }
 .sync-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:middle;}
@@ -223,7 +221,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 .res-form input{width:54px;text-align:center;font-size:18px;font-weight:600;}
 .res-done{font-family:"Bebas Neue",sans-serif;font-size:24px;color:var(--verde);letter-spacing:.05em;}
 /* STATS */
-.stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px;}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
 .stat-box{background:white;border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center;}
 .stat-num{font-family:"Bebas Neue",sans-serif;font-size:36px;color:var(--verde);}
 .stat-lbl{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em;margin-top:2px;}
@@ -313,6 +311,18 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 .app-footer .footer-logos{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
 .app-footer .footer-logos img{height:22px;object-fit:contain;filter:brightness(0) invert(1);opacity:.8;}
 </style>
+<script>
+function aceptarAutorizacion() {
+  localStorage.setItem('mroh_datos_autorizado', '1');
+  var modal = document.getElementById('modal-autorizacion');
+  if (modal) modal.style.display = 'none';
+}
+function verificarAutorizacion() {
+  var autorizado = localStorage.getItem('mroh_datos_autorizado');
+  var modal = document.getElementById('modal-autorizacion');
+  if (autorizado === '1') { if (modal) modal.style.display = 'none'; }
+}
+</script>
 </head>
 <body>
 
@@ -401,18 +411,9 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 
 <!-- HEADER -->
 <div class="header" id="main-header" style="display:none;">
-  <!-- Titulo izquierda -->
-  <div style="flex:1;">
-    <h1 id="hdr-titulo" style="font-size:18px;">🏆 Polla Mundialista MROH 2026</h1>
-    <div class="header-sub" id="hdr-subtitulo" style="display:none;"></div>
-    <div id="header-slogan" style="font-size:11px;color:rgba(255,255,255,.85);margin-top:1px;font-style:italic;display:none;"></div>
-    <div id="sync-status" style="font-size:10px;margin-top:2px;opacity:.8;">
-      <span class="sync-dot" style="background:#4ade80;"></span>Conectado con Firebase
-    </div>
+  <div style="flex:1;display:flex;justify-content:center;align-items:center;">
+    <img src="logos-mroh.png" alt="MROH Rionegro" style="height:46px;width:auto;object-fit:contain;max-width:220px;">
   </div>
-  <!-- Logo centro absoluto -->
-  <img src="logos-mroh.png" alt="MROH Rionegro" style="position:absolute;left:50%;transform:translateX(-50%);height:50px;width:auto;object-fit:contain;pointer-events:none;">
-  <!-- Usuario derecha -->
   <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
     <div class="user-pill" onclick="doLogout()" title="Cerrar sesi&oacute;n">
       <div class="u-avatar" id="hdr-avatar">?</div>
@@ -428,6 +429,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
   <button data-nav="apuestas" onclick="showTab('apuestas',this)">&#128203; Apuestas</button>
   <button data-nav="resultados" onclick="showTab('resultados',this)">&#127919; Resultados</button>
   <button data-nav="tabla" onclick="showTab('tabla',this)">&#127885; Tabla</button>
+  <button data-nav="dieciseis" onclick="showTab('dieciseis',this)">&#9889; 16vos</button>
   <button id="nav-admin" onclick="showTab('admin',this)" style="display:none;">&#9881; Admin <span class="admin-badge">Admin</span></button>
 </nav>
 
@@ -542,13 +544,31 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-lbl" id="stat-lbl-apuestas">Apuestas</div></div>
       <div class="stat-box"><div class="stat-num" id="st-partic">0</div><div class="stat-lbl" id="stat-lbl-partic">Participantes</div></div>
       <div class="stat-box"><div class="stat-num" id="st-partidos">0</div><div class="stat-lbl" id="stat-lbl-partidos">Partidos cubiertos</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-con-apuesta-tabla" style="color:#7c3aed;">0</div><div class="stat-lbl">Con apuestas</div></div>
     </div>
+    <details class="card" style="margin-bottom:14px;padding:0;overflow:hidden;">
+      <summary style="padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;list-style:none;user-select:none;">
+        <span class="card-title" style="margin:0;">&#128202; Apuestas por partido</span>
+        <span style="font-size:12px;color:var(--muted);font-weight:600;">Ver detalle &#9660;</span>
+      </summary>
+      <div style="padding:0 20px 16px;">
+        <div id="apuestas-por-partido"></div>
+      </div>
+    </details>
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;">
         <div class="card-title" id="sec-tabla-titulo" style="margin:0;">Clasificaci&oacute;n</div>
         <div style="font-size:11px;color:var(--muted);">Tiempo real</div>
       </div>
       <div id="tabla-ranking"></div>
+    </div>
+  </div>
+
+  <!-- 16VOS -->
+  <div class="panel" id="tab-dieciseis">
+    <div class="card">
+      <div class="card-title">&#9889; Dieciseisavos de Final</div>
+      <div id="partidos-16vos-container"></div>
     </div>
   </div>
 
@@ -561,6 +581,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         <button id="asubt-puntos" data-nav-admin="puntos" onclick="adminSubTab('puntos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#127942; Puntuaci&oacute;n</button>
         <button id="asubt-config" data-nav-admin="config" onclick="adminSubTab('config')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9881;&#65039; Partidos</button>
         <button id="asubt-textos" data-nav-admin="textos" onclick="adminSubTab('textos')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#9997;&#65039; Textos</button>
+        <button id="asubt-apuestas-usr" data-nav-admin="apuestas-usr" onclick="adminSubTab('apuestas-usr')" style="flex:1;padding:10px 8px;font-size:11px;font-weight:600;border:none;background:none;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap;">&#128203; Apuestas</button>
       </div>
     </div>
     <div id="admin-panel-usuarios">
@@ -608,6 +629,7 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
       <div class="stat-box"><div class="stat-num" id="st-registrados" style="color:#1e3a6e;">0</div><div class="stat-lbl">Registrados</div></div>
       <div class="stat-box"><div class="stat-num" id="st-asociados" style="color:#1a6b3c;">0</div><div class="stat-lbl">Asociados</div></div>
       <div class="stat-box"><div class="stat-num" id="st-invitados" style="color:#c8972b;">0</div><div class="stat-lbl">Invitados</div></div>
+      <div class="stat-box"><div class="stat-num" id="st-con-apuesta" style="color:#7c3aed;">0</div><div class="stat-lbl">Con apuestas</div></div>
     </div>
       <div id="lista-usuarios"></div>
       <div class="card" style="margin-top:14px;">
@@ -672,9 +694,33 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
         <button class="btn btn-primary btn-sm" onclick="saveFechaEliminacion()">&#10003; Guardar configuraci&oacute;n</button>
         <div id="estado-eliminacion" style="margin-top:12px;font-size:13px;color:var(--muted);"></div>
       </div>
+    </div>
+    <div id="admin-panel-apuestas-usr" style="display:none;">
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+          <div class="card-title" style="margin:0;">&#128203; Apuestas por usuario</div>
+          <button id="toggle-apertura-global" onclick="toggleAperturaGlobal()"
+            style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-weight:600;background:#e8f7ed;color:#1a6b3c;border-color:#a3d9b8;">
+            &#128275; Apuestas abiertas (cerrar todo)
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+          <input type="text" id="filtro-usr-nombre" placeholder="&#128269; Buscar usuario..." oninput="renderApuestasPorUsuario()"
+            style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          <select id="filtro-usr-tipo" onchange="renderApuestasPorUsuario()"
+            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:white;">
+            <option value="">Todos los tipos</option>
+            <option value="grupo">Partidos de grupo</option>
+            <option value="campeon">Campe&#243;n</option>
+            <option value="subcampeon">Subcampe&#243;n</option>
+            <option value="tercer_puesto">Tercer puesto</option>
+          </select>
+        </div>
+      </div>
+      <div id="lista-apuestas-por-usuario"></div>
       <div class="card" style="margin-top:0;">
         <div class="card-title">&#9200; Horarios eliminatorias</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Configura el horario de inicio de cada partido eliminatorio. El sistema cerrará apuestas 30 minutos antes automáticamente.</p>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Configura el horario de inicio de cada partido eliminatorio. El sistema cerrar&#225; apuestas 30 minutos antes autom&#225;ticamente.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px;">
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">ID Partido</label>
@@ -698,28 +744,20 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
                 <option value="D16">D16 - Colombia vs Ghana</option>
               </optgroup>
               <optgroup label="8avos">
-                <option value="O01">O01 - 8avos #1</option>
-                <option value="O02">O02 - 8avos #2</option>
-                <option value="O03">O03 - 8avos #3</option>
-                <option value="O04">O04 - 8avos #4</option>
-                <option value="O05">O05 - 8avos #5</option>
-                <option value="O06">O06 - 8avos #6</option>
-                <option value="O07">O07 - 8avos #7</option>
-                <option value="O08">O08 - 8avos #8</option>
+                <option value="O01">O01 - 8avos #1</option><option value="O02">O02 - 8avos #2</option>
+                <option value="O03">O03 - 8avos #3</option><option value="O04">O04 - 8avos #4</option>
+                <option value="O05">O05 - 8avos #5</option><option value="O06">O06 - 8avos #6</option>
+                <option value="O07">O07 - 8avos #7</option><option value="O08">O08 - 8avos #8</option>
               </optgroup>
               <optgroup label="Cuartos">
-                <option value="Q01">Q01 - Cuartos #1</option>
-                <option value="Q02">Q02 - Cuartos #2</option>
-                <option value="Q03">Q03 - Cuartos #3</option>
-                <option value="Q04">Q04 - Cuartos #4</option>
+                <option value="Q01">Q01 - Cuartos #1</option><option value="Q02">Q02 - Cuartos #2</option>
+                <option value="Q03">Q03 - Cuartos #3</option><option value="Q04">Q04 - Cuartos #4</option>
               </optgroup>
               <optgroup label="Semifinales">
-                <option value="S01">S01 - Semifinal #1</option>
-                <option value="S02">S02 - Semifinal #2</option>
+                <option value="S01">S01 - Semifinal #1</option><option value="S02">S02 - Semifinal #2</option>
               </optgroup>
               <optgroup label="Final">
-                <option value="F01">F01 - Tercer puesto</option>
-                <option value="F02">F02 - Final</option>
+                <option value="F01">F01 - Tercer puesto</option><option value="F02">F02 - Final</option>
               </optgroup>
             </select>
           </div>
@@ -777,7 +815,6 @@ input:focus,select:focus{border-color:var(--verde);background:white;}
 <div class="toast" id="toast"></div>
 
 <script src="./app2.js"></script>
-
 
 <!-- MODAL: CARGUE MASIVO -->
 <div id="modal-cargue" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">
