@@ -149,6 +149,26 @@ const PARTIDOS = [
   {id:"D14",grupo:"16avos",local:"Australia",visitante:"Egipto",fecha:"3 Jul",sede:"Dallas"},
   {id:"D15",grupo:"16avos",local:"Argentina",visitante:"Cabo Verde",fecha:"3 Jul",sede:"Miami"},
   {id:"D16",grupo:"16avos",local:"Colombia",visitante:"Ghana",fecha:"3 Jul",sede:"Kansas City"},
+  // ── OCTAVOS DE FINAL ──
+  {id:"O01",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"5 Jul",sede:"Por confirmar"},
+  {id:"O02",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"5 Jul",sede:"Por confirmar"},
+  {id:"O03",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"6 Jul",sede:"Por confirmar"},
+  {id:"O04",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"6 Jul",sede:"Por confirmar"},
+  {id:"O05",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"7 Jul",sede:"Por confirmar"},
+  {id:"O06",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"7 Jul",sede:"Por confirmar"},
+  {id:"O07",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"8 Jul",sede:"Por confirmar"},
+  {id:"O08",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"8 Jul",sede:"Por confirmar"},
+  // ── CUARTOS DE FINAL ──
+  {id:"Q01",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
+  {id:"Q02",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
+  {id:"Q03",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"12 Jul",sede:"Por confirmar"},
+  {id:"Q04",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"12 Jul",sede:"Por confirmar"},
+  // ── SEMIFINALES ──
+  {id:"S01",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"15 Jul",sede:"Por confirmar"},
+  {id:"S02",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"16 Jul",sede:"Por confirmar"},
+  // ── FINAL ──
+  {id:"F01",grupo:"Final",local:"Por confirmar",visitante:"Por confirmar",fecha:"19 Jul",sede:"Por confirmar"},
+  {id:"F02",grupo:"Final",local:"Por confirmar",visitante:"Por confirmar",fecha:"19 Jul",sede:"Por confirmar"},
 ];
 
 const EQUIPOS = [...new Set(PARTIDOS.flatMap(p=>[p.local,p.visitante]))].sort();
@@ -365,7 +385,7 @@ function showApp() {
   actualizarHeaderUsuario();
   renderPtsInfo();
   // Cargar datos tras autenticación
-  cargarResultados();
+  cargarPartidosElim().then(() => cargarResultados());
   suscribirApuestas();
 
   // Escuchar cambios de rol en tiempo real
@@ -850,34 +870,33 @@ function preselectPartido(pid) {
 function renderDieciseis() {
   const container = document.getElementById('partidos-16vos-container');
   if (!container) return;
-  const partidos16 = PARTIDOS.filter(p => p.grupo === '16avos');
+  const fasesElim = ['16avos','8avos','Cuartos','Semifinales','Final'];
+  const partidos16 = PARTIDOS.filter(p => fasesElim.includes(p.grupo));
   if (!partidos16.length) {
     container.innerHTML = '<div style="color:var(--muted);padding:12px 0;">Sin partidos cargados.</div>';
     return;
   }
-  const porFecha = {};
-  partidos16.forEach(p => {
-    if (!porFecha[p.fecha]) porFecha[p.fecha] = [];
-    porFecha[p.fecha].push(p);
-  });
+  const porFase = {};
+  fasesElim.forEach(f => porFase[f] = []);
+  partidos16.forEach(p => { if (porFase[p.grupo]) porFase[p.grupo].push(p); });
+  const esAdmin = currentUser && currentUser.rol === 'admin';
   let html = '';
-  const fechas = Object.keys(porFecha);
-  for (let fi = 0; fi < fechas.length; fi++) {
-    const fecha = fechas[fi];
-    const ps = porFecha[fecha];
-    html += '<div class="fecha-bloque">';
-    html += '<div class="fecha-header"><div class="fecha-badge">&#128197; ' + fecha + '</div>';
-    html += '<div class="fecha-line"></div>';
-    html += '<div style="font-size:12px;color:var(--muted);white-space:nowrap;">' + ps.length + ' partido' + (ps.length!==1?'s':'') + '</div></div>';
+  fasesElim.forEach(fase => {
+    const ps = porFase[fase];
+    if (!ps || !ps.length) return;
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="font-family:Bebas Neue,sans-serif;font-size:18px;color:var(--verde);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border);">&#9889; ' + fase + '</div>';
     html += '<div class="partidos-grid">';
-    for (let pi = 0; pi < ps.length; pi++) {
-      const p = ps[pi];
-      const abierto = estaAbierto(p.id, 'elim');
-      const tiempo  = tiempoRestante(p.id, 'elim');
+    ps.forEach(p => {
+      const esPorConfirmar = p.local === 'Por confirmar';
+      const abierto = !esPorConfirmar && estaAbierto(p.id, 'elim');
+      const tiempo  = !esPorConfirmar && tiempoRestante(p.id, 'elim');
       const res = resultados[p.id];
-      const miApuesta = apuestas.find(a => a.partidoId === p.id);
+      const miApuesta = !esPorConfirmar && apuestas.find(a => a.partidoId === p.id);
       let badge = '';
-      if (abierto) {
+      if (esPorConfirmar) {
+        badge = '<span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9203; Por confirmar</span>';
+      } else if (abierto) {
         badge = tiempo
           ? '<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9203; ' + tiempo + '</span>'
           : '<span style="background:#d1fae5;color:#065f46;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#9989; ABIERTO</span>';
@@ -885,17 +904,57 @@ function renderDieciseis() {
         badge = '<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">&#128683; CERRADO</span>';
       }
       const claseRes = res ? ' con-resultado' : '';
-      html += '<div class="partido-card' + claseRes + '" onclick="abrirApuestaPartido(&quot;' + p.id + '&quot;)">';
+      const onclickAttr = (!esPorConfirmar && abierto) ? 'onclick="abrirApuestaPartido(\"' + p.id + '\")"' : '';
+      html += '<div class="partido-card' + claseRes + '" ' + onclickAttr + ' style="' + (esPorConfirmar?'opacity:0.6;':'') + '">';
       html += '<div class="p-grupo" style="display:flex;justify-content:space-between;align-items:center;">';
-      html += '<span>16avos &middot; ' + p.sede + '</span>' + badge + '</div>';
-      html += '<div class="p-match">' + p.local + ' vs ' + p.visitante + '</div>';
+      html += '<span>' + fase + ' &middot; ' + p.id + '</span>' + badge + '</div>';
+      // Admin puede editar nombre del partido
+      if (esAdmin && esPorConfirmar) {
+        html += '<div style="margin-top:6px;display:flex;gap:4px;">';
+        html += '<input id="eq-local-' + p.id + '" placeholder="Local" list="lista-equipos" style="flex:1;padding:4px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;"/>';
+        html += '<span style="color:var(--muted);padding:4px;">vs</span>';
+        html += '<input id="eq-visit-' + p.id + '" placeholder="Visitante" list="lista-equipos" style="flex:1;padding:4px 6px;font-size:11px;border:1px solid var(--border);border-radius:6px;"/>';
+        html += '<button onclick="confirmarPartido(&quot;' + p.id + '&quot;,&quot;' + fase + '&quot;)" style="padding:4px 8px;font-size:11px;background:var(--verde);color:white;border:none;border-radius:6px;cursor:pointer;">&#10003;</button>';
+        html += '</div>';
+      } else {
+        html += '<div class="p-match">' + p.local + ' vs ' + p.visitante + '</div>';
+      }
+      if (p.sede && p.sede !== 'Por confirmar') html += '<div class="p-sede">&#128205; ' + p.sede + '</div>';
       if (res) html += '<div class="p-res">' + (res.local !== undefined ? res.local : '?') + ' - ' + (res.visitante !== undefined ? res.visitante : '?') + '</div>';
       if (miApuesta) html += '<div style="font-size:11px;color:var(--verde);margin-top:4px;">&#10003; Apostado: ' + miApuesta.golLocal + '-' + miApuesta.golVisitante + '</div>';
       html += '</div>';
-    }
+    });
     html += '</div></div>';
-  }
+  });
   container.innerHTML = html;
+}
+
+async function confirmarPartido(pid, fase) {
+  const local    = document.getElementById('eq-local-' + pid)?.value.trim();
+  const visitante = document.getElementById('eq-visit-' + pid)?.value.trim();
+  if (!local || !visitante) { toast('Ingresa ambos equipos'); return; }
+  // Actualizar en el array PARTIDOS en memoria
+  const p = PARTIDOS.find(x => x.id === pid);
+  if (p) { p.local = local; p.visitante = visitante; }
+  // Guardar en Firestore para persistir
+  await db.collection('config').doc('partidos-elim').set({ [pid]: { local, visitante } }, { merge: true });
+  toast('✓ ' + pid + ': ' + local + ' vs ' + visitante);
+  renderDieciseis();
+}
+
+async function cargarPartidosElim() {
+  try {
+    const snap = await db.collection('config').doc('partidos-elim').get();
+    if (!snap.exists) return;
+    const data = snap.data();
+    Object.entries(data).forEach(([pid, equipos]) => {
+      const p = PARTIDOS.find(x => x.id === pid);
+      if (p && equipos.local && equipos.local !== 'Por confirmar') {
+        p.local = equipos.local;
+        p.visitante = equipos.visitante;
+      }
+    });
+  } catch(e) { console.warn('Error cargando partidos elim:', e.message); }
 }
 
 function renderApuestasPorPartido() {
