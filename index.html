@@ -721,7 +721,7 @@ function verificarAutorizacion() {
       <div class="card" style="margin-top:0;">
         <div class="card-title">&#9200; Partidos eliminatorios — equipos y horarios</div>
         <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define los equipos y hora de inicio. El sistema cerrar&#225; apuestas 30 minutos antes autom&#225;ticamente.</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Partido</label>
             <select id="horario-elim-id" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
@@ -747,19 +747,34 @@ function verificarAutorizacion() {
             </select>
           </div>
           <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Local vs Visitante</label>
-            <div style="display:flex;gap:4px;">
-              <input type="text" id="horario-elim-local" placeholder="Local" list="lista-equipos" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;"/>
-              <span style="padding:8px 2px;color:var(--muted);font-size:12px;">vs</span>
-              <input type="text" id="horario-elim-visit" placeholder="Visitante" list="lista-equipos" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;"/>
-            </div>
-          </div>
-          <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Hora Colombia</label>
             <input type="datetime-local" id="horario-elim-hora" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
           </div>
-          <button class="btn btn-primary btn-sm" onclick="guardarHorarioElim()" style="white-space:nowrap;">&#10003; Guardar</button>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Equipo Local</label>
+            <input type="text" id="horario-elim-local" placeholder="Ej: Brasil" list="lista-equipos" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Equipo Visitante</label>
+            <input type="text" id="horario-elim-visit" placeholder="Ej: Argentina" list="lista-equipos" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Sede</label>
+            <input type="text" id="horario-elim-sede" placeholder="Ej: Miami" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-end;">
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;">Desempate</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="horario-elim-tarjetas" style="width:14px;height:14px;"/>
+              &#129000; Tarjetas amarillas
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+              <input type="checkbox" id="horario-elim-esquinas" style="width:14px;height:14px;"/>
+              &#128257; Tiros de esquina
+            </label>
+          </div>
         </div>
+        <button class="btn btn-primary" onclick="guardarHorarioElim()" style="width:100%;margin-bottom:12px;">&#10003; Guardar partido eliminatorio</button>
         <div id="lista-horarios-elim" style="font-size:12px;color:var(--muted);"></div>
       </div>
     </div>

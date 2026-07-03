@@ -1743,22 +1743,41 @@ async function resetPassword(uid, nombre, emailOCedula) {
 }
 
 async function guardarHorarioElim() {
-  const id      = document.getElementById('horario-elim-id').value;
-  const hora    = document.getElementById('horario-elim-hora').value;
-  const local   = document.getElementById('horario-elim-local')?.value.trim() || '';
+  const id        = document.getElementById('horario-elim-id').value;
+  const hora      = document.getElementById('horario-elim-hora').value;
+  const local     = document.getElementById('horario-elim-local')?.value.trim() || '';
   const visitante = document.getElementById('horario-elim-visit')?.value.trim() || '';
+  const sede      = document.getElementById('horario-elim-sede')?.value.trim() || '';
+  const tarjetas  = document.getElementById('horario-elim-tarjetas')?.checked || false;
+  const esquinas  = document.getElementById('horario-elim-esquinas')?.checked || false;
   if (!id) { toast('Selecciona un partido'); return; }
-  // Guardar horario si se proporcionó
+  // Guardar horario
   if (hora) {
     const iso = hora.slice(0, 16) + ':00';
     await db.collection('horarios').doc(id).set({ horaInicio: iso }, { merge: true });
     _horariosPartidos[id] = iso;
   }
-  // Guardar equipos si se proporcionaron
-  if (local && visitante) {
+  // Guardar equipos, sede y desempate
+  const datosPartido = {};
+  if (local && visitante) { datosPartido.local = local; datosPartido.visitante = visitante; }
+  if (sede) datosPartido.sede = sede;
+  datosPartido.tarjetas = tarjetas;
+  datosPartido.esquinas = esquinas;
+  if (Object.keys(datosPartido).length > 0) {
+    // Actualizar en memoria
     const p = PARTIDOS.find(x => x.id === id);
-    if (p) { p.local = local; p.visitante = visitante; }
-    await db.collection('config').doc('partidos-elim').set({ [id]: { local, visitante } }, { merge: true });
+    if (p) {
+      if (local) p.local = local;
+      if (visitante) p.visitante = visitante;
+      if (sede) p.sede = sede;
+    }
+    // Actualizar configPartidos para desempate
+    if (!configPartidos[id]) configPartidos[id] = {};
+    configPartidos[id].tarjetas = tarjetas;
+    configPartidos[id].esquinas = esquinas;
+    // Guardar en Firestore
+    await db.collection('config').doc('partidos-elim').set({ [id]: datosPartido }, { merge: true });
+    await db.collection('config').doc('partidos').set({ [id]: { tarjetas, esquinas } }, { merge: true });
   }
   toast('✓ Guardado: ' + id + (local ? ' — ' + local + ' vs ' + visitante : '') + (hora ? ' @ ' + hora.slice(11,16) : ''));
   cargarHorariosElim();
