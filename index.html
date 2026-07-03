@@ -429,7 +429,7 @@ function verificarAutorizacion() {
   <button data-nav="apuestas" onclick="showTab('apuestas',this)">&#128203; Apuestas</button>
   <button data-nav="resultados" onclick="showTab('resultados',this)">&#127919; Resultados</button>
   <button data-nav="tabla" onclick="showTab('tabla',this)">&#127885; Tabla</button>
-  <button data-nav="dieciseis" onclick="showTab('dieciseis',this)">&#9889; 16vos</button>
+  <button data-nav="dieciseis" onclick="showTab('dieciseis',this)">&#127942; Finales</button>
   <button id="nav-admin" onclick="showTab('admin',this)" style="display:none;">&#9881; Admin <span class="admin-badge">Admin</span></button>
 </nav>
 
@@ -564,10 +564,10 @@ function verificarAutorizacion() {
     </div>
   </div>
 
-  <!-- 16VOS -->
+  <!-- FINALES -->
   <div class="panel" id="tab-dieciseis">
     <div class="card">
-      <div class="card-title">&#9889; Dieciseisavos de Final</div>
+      <div class="card-title">&#127942; Fases Eliminatorias</div>
       <div id="partidos-16vos-container"></div>
     </div>
   </div>
@@ -719,47 +719,40 @@ function verificarAutorizacion() {
       </div>
       <div id="lista-apuestas-por-usuario"></div>
       <div class="card" style="margin-top:0;">
-        <div class="card-title">&#9200; Horarios eliminatorias</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Configura el horario de inicio de cada partido eliminatorio. El sistema cerrar&#225; apuestas 30 minutos antes autom&#225;ticamente.</p>
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px;">
+        <div class="card-title">&#9200; Partidos eliminatorios — equipos y horarios</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define los equipos y hora de inicio. El sistema cerrar&#225; apuestas 30 minutos antes autom&#225;ticamente.</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;margin-bottom:12px;">
           <div>
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">ID Partido</label>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Partido</label>
             <select id="horario-elim-id" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
               <optgroup label="16avos">
-                <option value="D01">D01 - Sudáfrica vs Canadá</option>
-                <option value="D02">D02 - Brasil vs Japón</option>
-                <option value="D03">D03 - Alemania vs Paraguay</option>
-                <option value="D04">D04 - Países Bajos vs Marruecos</option>
-                <option value="D05">D05 - Costa de Marfil vs Noruega</option>
-                <option value="D06">D06 - Francia vs Suecia</option>
-                <option value="D07">D07 - México vs Ecuador</option>
-                <option value="D08">D08 - Inglaterra vs Rep. Dem. Congo</option>
-                <option value="D09">D09 - Bélgica vs Senegal</option>
-                <option value="D10">D10 - EE.UU. vs Bosnia</option>
-                <option value="D11">D11 - España vs Argelia</option>
-                <option value="D12">D12 - Portugal vs Croacia</option>
-                <option value="D13">D13 - Suiza vs Irán</option>
-                <option value="D14">D14 - Australia vs Egipto</option>
-                <option value="D15">D15 - Argentina vs Cabo Verde</option>
-                <option value="D16">D16 - Colombia vs Ghana</option>
+                <option value="D01">D01</option><option value="D02">D02</option><option value="D03">D03</option><option value="D04">D04</option>
+                <option value="D05">D05</option><option value="D06">D06</option><option value="D07">D07</option><option value="D08">D08</option>
+                <option value="D09">D09</option><option value="D10">D10</option><option value="D11">D11</option><option value="D12">D12</option>
+                <option value="D13">D13</option><option value="D14">D14</option><option value="D15">D15</option><option value="D16">D16</option>
               </optgroup>
               <optgroup label="8avos">
-                <option value="O01">O01 - 8avos #1</option><option value="O02">O02 - 8avos #2</option>
-                <option value="O03">O03 - 8avos #3</option><option value="O04">O04 - 8avos #4</option>
-                <option value="O05">O05 - 8avos #5</option><option value="O06">O06 - 8avos #6</option>
-                <option value="O07">O07 - 8avos #7</option><option value="O08">O08 - 8avos #8</option>
+                <option value="O01">O01</option><option value="O02">O02</option><option value="O03">O03</option><option value="O04">O04</option>
+                <option value="O05">O05</option><option value="O06">O06</option><option value="O07">O07</option><option value="O08">O08</option>
               </optgroup>
               <optgroup label="Cuartos">
-                <option value="Q01">Q01 - Cuartos #1</option><option value="Q02">Q02 - Cuartos #2</option>
-                <option value="Q03">Q03 - Cuartos #3</option><option value="Q04">Q04 - Cuartos #4</option>
+                <option value="Q01">Q01</option><option value="Q02">Q02</option><option value="Q03">Q03</option><option value="Q04">Q04</option>
               </optgroup>
               <optgroup label="Semifinales">
-                <option value="S01">S01 - Semifinal #1</option><option value="S02">S02 - Semifinal #2</option>
+                <option value="S01">S01</option><option value="S02">S02</option>
               </optgroup>
               <optgroup label="Final">
                 <option value="F01">F01 - Tercer puesto</option><option value="F02">F02 - Final</option>
               </optgroup>
             </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Local vs Visitante</label>
+            <div style="display:flex;gap:4px;">
+              <input type="text" id="horario-elim-local" placeholder="Local" list="lista-equipos" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;"/>
+              <span style="padding:8px 2px;color:var(--muted);font-size:12px;">vs</span>
+              <input type="text" id="horario-elim-visit" placeholder="Visitante" list="lista-equipos" style="flex:1;padding:8px 8px;border:1px solid var(--border);border-radius:8px;font-size:12px;"/>
+            </div>
           </div>
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Hora Colombia</label>

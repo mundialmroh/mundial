@@ -1743,26 +1743,55 @@ async function resetPassword(uid, nombre, emailOCedula) {
 }
 
 async function guardarHorarioElim() {
-  const id   = document.getElementById('horario-elim-id').value;
-  const hora = document.getElementById('horario-elim-hora').value;
-  if (!id || !hora) { toast('Selecciona partido y hora'); return; }
-  const iso = hora.slice(0, 16) + ':00';
-  await db.collection('horarios').doc(id).set({ horaInicio: iso }, { merge: true });
-  _horariosPartidos[id] = iso;
-  toast('✓ Horario guardado: ' + id + ' -> ' + iso);
+  const id      = document.getElementById('horario-elim-id').value;
+  const hora    = document.getElementById('horario-elim-hora').value;
+  const local   = document.getElementById('horario-elim-local')?.value.trim() || '';
+  const visitante = document.getElementById('horario-elim-visit')?.value.trim() || '';
+  if (!id) { toast('Selecciona un partido'); return; }
+  // Guardar horario si se proporcionó
+  if (hora) {
+    const iso = hora.slice(0, 16) + ':00';
+    await db.collection('horarios').doc(id).set({ horaInicio: iso }, { merge: true });
+    _horariosPartidos[id] = iso;
+  }
+  // Guardar equipos si se proporcionaron
+  if (local && visitante) {
+    const p = PARTIDOS.find(x => x.id === id);
+    if (p) { p.local = local; p.visitante = visitante; }
+    await db.collection('config').doc('partidos-elim').set({ [id]: { local, visitante } }, { merge: true });
+  }
+  toast('✓ Guardado: ' + id + (local ? ' — ' + local + ' vs ' + visitante : '') + (hora ? ' @ ' + hora.slice(11,16) : ''));
   cargarHorariosElim();
+  renderDieciseis();
 }
 
 async function cargarHorariosElim() {
   const container = document.getElementById('lista-horarios-elim');
   if (!container) return;
   try {
-    const snap = await db.collection('horarios').get();
-    const gruposIds = ['A1','A2','A3','A4','A5','A6','B1','B2','B3','B4','B5','B6','C1','C2','C3','C4','C5','C6','D1','D2','D3','D4','D5','D6','E1','E2','E3','E4','E5','E6','F1','F2','F3','F4','F5','F6','G1','G2','G3','G4','G5','G6','H1','H2','H3','H4','H5','H6','I1','I2','I3','I4','I5','I6','J1','J2','J3','J4','J5','J6','K1','K2','K3','K4','K5','K6','L1','L2','L3','L4','L5','L6'];
-    const elim = snap.docs.filter(d => !gruposIds.includes(d.id)).sort((a,b) => a.id.localeCompare(b.id));
-    if (!elim.length) { container.innerHTML = 'Sin horarios eliminatorias guardados.'; return; }
+    const gruposIds = new Set(['A1','A2','A3','A4','A5','A6','B1','B2','B3','B4','B5','B6','C1','C2','C3','C4','C5','C6','D1','D2','D3','D4','D5','D6','E1','E2','E3','E4','E5','E6','F1','F2','F3','F4','F5','F6','G1','G2','G3','G4','G5','G6','H1','H2','H3','H4','H5','H6','I1','I2','I3','I4','I5','I6','J1','J2','J3','J4','J5','J6','K1','K2','K3','K4','K5','K6','L1','L2','L3','L4','L5','L6']);
+    const [snapH, snapE] = await Promise.all([
+      db.collection('horarios').get(),
+      db.collection('config').doc('partidos-elim').get()
+    ]);
+    const equipos = snapE.exists ? snapE.data() : {};
+    const elim = snapH.docs.filter(d => !gruposIds.has(d.id)).sort((a,b) => a.id.localeCompare(b.id));
+    // También incluir partidos con equipos pero sin horario
+    const conEquipos = Object.keys(equipos).filter(id => !elim.find(d => d.id === id));
+    if (!elim.length && !conEquipos.length) { container.innerHTML = 'Sin partidos eliminatorios configurados.'; return; }
+    const items = [
+      ...elim.map(d => ({ id: d.id, hora: d.data().horaInicio||'', ...((equipos[d.id])||{}) })),
+      ...conEquipos.map(id => ({ id, hora: '', ...(equipos[id]||{}) }))
+    ].sort((a,b) => a.id.localeCompare(b.id));
     container.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">' +
-      elim.map(d => '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;"><span style="font-weight:700;color:var(--verde);">' + d.id + '</span> ' + (d.data().horaInicio||'') + '</div>').join('') + '</div>';
+      items.map(d => {
+        const equiposStr = d.local && d.local !== 'Por confirmar' ? d.local + ' vs ' + d.visitante : '';
+        return '<div style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12px;">' +
+          '<span style="font-weight:700;color:var(--verde);">' + d.id + '</span> ' +
+          (equiposStr ? '<span style="color:var(--text);">' + equiposStr + '</span> ' : '') +
+          (d.hora ? '<span style="color:var(--muted);">' + d.hora.slice(11,16) + '</span>' : '') +
+          '</div>';
+      }).join('') + '</div>';
   } catch(e) { container.innerHTML = 'Error: ' + e.message; }
 }
 
