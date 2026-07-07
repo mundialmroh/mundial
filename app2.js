@@ -159,10 +159,10 @@ const PARTIDOS = [
   {id:"O07",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"7 Jul",sede:"Por confirmar"},
   {id:"O08",grupo:"8avos",local:"Por confirmar",visitante:"Por confirmar",fecha:"7 Jul",sede:"Por confirmar"},
   // ── CUARTOS DE FINAL ──
-  {id:"Q01",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
-  {id:"Q02",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
-  {id:"Q03",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"12 Jul",sede:"Por confirmar"},
-  {id:"Q04",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"12 Jul",sede:"Por confirmar"},
+  {id:"Q01",grupo:"Cuartos",local:"Francia",visitante:"Marruecos",fecha:"9 Jul",sede:"Por confirmar"},
+  {id:"Q02",grupo:"Cuartos",local:"España",visitante:"Bélgica",fecha:"10 Jul",sede:"Por confirmar"},
+  {id:"Q03",grupo:"Cuartos",local:"Noruega",visitante:"Inglaterra",fecha:"11 Jul",sede:"Por confirmar"},
+  {id:"Q04",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
   // ── SEMIFINALES ──
   {id:"S01",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"15 Jul",sede:"Por confirmar"},
   {id:"S02",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"16 Jul",sede:"Por confirmar"},
