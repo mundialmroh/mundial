@@ -164,8 +164,8 @@ const PARTIDOS = [
   {id:"Q03",grupo:"Cuartos",local:"Noruega",visitante:"Inglaterra",fecha:"11 Jul",sede:"Por confirmar"},
   {id:"Q04",grupo:"Cuartos",local:"Por confirmar",visitante:"Por confirmar",fecha:"11 Jul",sede:"Por confirmar"},
   // ── SEMIFINALES ──
-  {id:"S01",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"15 Jul",sede:"Por confirmar"},
-  {id:"S02",grupo:"Semifinales",local:"Por confirmar",visitante:"Por confirmar",fecha:"16 Jul",sede:"Por confirmar"},
+  {id:"S01",grupo:"Semifinales",local:"Francia",visitante:"España",fecha:"14 Jul",sede:"Por confirmar"},
+  {id:"S02",grupo:"Semifinales",local:"Inglaterra",visitante:"Argentina",fecha:"15 Jul",sede:"Por confirmar"},
   // ── FINAL ──
   {id:"F01",grupo:"Final",local:"Por confirmar",visitante:"Por confirmar",fecha:"19 Jul",sede:"Por confirmar"},
   {id:"F02",grupo:"Final",local:"Por confirmar",visitante:"Por confirmar",fecha:"19 Jul",sede:"Por confirmar"},
