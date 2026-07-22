@@ -540,6 +540,7 @@ function verificarAutorizacion() {
 
   <!-- TABLA -->
   <div class="panel" id="tab-tabla">
+    <div id="ganadores-especiales" style="display:none;"></div>
     <div class="stats-grid">
       <div class="stat-box"><div class="stat-num" id="st-total">0</div><div class="stat-lbl" id="stat-lbl-apuestas">Apuestas</div></div>
       <div class="stat-box"><div class="stat-num" id="st-partic">0</div><div class="stat-lbl" id="stat-lbl-partic">Participantes</div></div>
@@ -551,9 +552,7 @@ function verificarAutorizacion() {
         <span class="card-title" style="margin:0;">&#128202; Apuestas por partido</span>
         <span style="font-size:12px;color:var(--muted);font-weight:600;">Ver detalle &#9660;</span>
       </summary>
-      <div style="padding:0 20px 16px;">
-        <div id="apuestas-por-partido"></div>
-      </div>
+      <div style="padding:0 20px 16px;"><div id="apuestas-por-partido"></div></div>
     </details>
     <div class="card" style="padding:0;overflow:hidden;">
       <div style="padding:14px 16px 8px;display:flex;justify-content:space-between;align-items:center;">
@@ -699,16 +698,11 @@ function verificarAutorizacion() {
       <div class="card" style="margin-bottom:12px;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
           <div class="card-title" style="margin:0;">&#128203; Apuestas por usuario</div>
-          <button id="toggle-apertura-global" onclick="toggleAperturaGlobal()"
-            style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-weight:600;background:#e8f7ed;color:#1a6b3c;border-color:#a3d9b8;">
-            &#128275; Apuestas abiertas (cerrar todo)
-          </button>
+          <button id="toggle-apertura-global" onclick="toggleAperturaGlobal()" style="font-size:12px;padding:6px 14px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-weight:600;background:#e8f7ed;color:#1a6b3c;">&#128275; Apuestas abiertas (cerrar todo)</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-          <input type="text" id="filtro-usr-nombre" placeholder="&#128269; Buscar usuario..." oninput="renderApuestasPorUsuario()"
-            style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
-          <select id="filtro-usr-tipo" onchange="renderApuestasPorUsuario()"
-            style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:white;">
+          <input type="text" id="filtro-usr-nombre" placeholder="&#128269; Buscar usuario..." oninput="renderApuestasPorUsuario()" style="flex:1;min-width:160px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
+          <select id="filtro-usr-tipo" onchange="renderApuestasPorUsuario()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:white;">
             <option value="">Todos los tipos</option>
             <option value="grupo">Partidos de grupo</option>
             <option value="campeon">Campe&#243;n</option>
@@ -719,31 +713,17 @@ function verificarAutorizacion() {
       </div>
       <div id="lista-apuestas-por-usuario"></div>
       <div class="card" style="margin-top:0;">
-        <div class="card-title">&#9200; Partidos eliminatorios — equipos y horarios</div>
-        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define los equipos y hora de inicio. El sistema cerrar&#225; apuestas 30 minutos antes autom&#225;ticamente.</p>
+        <div class="card-title">&#9200; Partidos eliminatorios</div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">Define equipos, sede, hora y desempate. El cierre ser&#225; 30 minutos antes del inicio.</p>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
           <div>
             <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;margin-bottom:5px;">Partido</label>
             <select id="horario-elim-id" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;">
-              <optgroup label="16avos">
-                <option value="D01">D01</option><option value="D02">D02</option><option value="D03">D03</option><option value="D04">D04</option>
-                <option value="D05">D05</option><option value="D06">D06</option><option value="D07">D07</option><option value="D08">D08</option>
-                <option value="D09">D09</option><option value="D10">D10</option><option value="D11">D11</option><option value="D12">D12</option>
-                <option value="D13">D13</option><option value="D14">D14</option><option value="D15">D15</option><option value="D16">D16</option>
-              </optgroup>
-              <optgroup label="8avos">
-                <option value="O01">O01</option><option value="O02">O02</option><option value="O03">O03</option><option value="O04">O04</option>
-                <option value="O05">O05</option><option value="O06">O06</option><option value="O07">O07</option><option value="O08">O08</option>
-              </optgroup>
-              <optgroup label="Cuartos">
-                <option value="Q01">Q01</option><option value="Q02">Q02</option><option value="Q03">Q03</option><option value="Q04">Q04</option>
-              </optgroup>
-              <optgroup label="Semifinales">
-                <option value="S01">S01</option><option value="S02">S02</option>
-              </optgroup>
-              <optgroup label="Final">
-                <option value="F01">F01 - Tercer puesto</option><option value="F02">F02 - Final</option>
-              </optgroup>
+              <optgroup label="16avos"><option value="D01">D01</option><option value="D02">D02</option><option value="D03">D03</option><option value="D04">D04</option><option value="D05">D05</option><option value="D06">D06</option><option value="D07">D07</option><option value="D08">D08</option><option value="D09">D09</option><option value="D10">D10</option><option value="D11">D11</option><option value="D12">D12</option><option value="D13">D13</option><option value="D14">D14</option><option value="D15">D15</option><option value="D16">D16</option></optgroup>
+              <optgroup label="8avos"><option value="O01">O01</option><option value="O02">O02</option><option value="O03">O03</option><option value="O04">O04</option><option value="O05">O05</option><option value="O06">O06</option><option value="O07">O07</option><option value="O08">O08</option></optgroup>
+              <optgroup label="Cuartos"><option value="Q01">Q01</option><option value="Q02">Q02</option><option value="Q03">Q03</option><option value="Q04">Q04</option></optgroup>
+              <optgroup label="Semifinales"><option value="S01">S01</option><option value="S02">S02</option></optgroup>
+              <optgroup label="Final"><option value="F01">F01 - Tercer puesto</option><option value="F02">F02 - Final</option></optgroup>
             </select>
           </div>
           <div>
@@ -763,18 +743,12 @@ function verificarAutorizacion() {
             <input type="text" id="horario-elim-sede" placeholder="Ej: Miami" style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;"/>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-end;">
-            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;display:block;">Desempate</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" id="horario-elim-tarjetas" style="width:14px;height:14px;"/>
-              &#129000; Tarjetas amarillas
-            </label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
-              <input type="checkbox" id="horario-elim-esquinas" style="width:14px;height:14px;"/>
-              &#128257; Tiros de esquina
-            </label>
+            <label style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;">Desempate</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="horario-elim-tarjetas" style="width:14px;height:14px;"/> &#129000; Tarjetas</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;"><input type="checkbox" id="horario-elim-esquinas" style="width:14px;height:14px;"/> &#128257; Esquinas</label>
           </div>
         </div>
-        <button class="btn btn-primary" onclick="guardarHorarioElim()" style="width:100%;margin-bottom:12px;">&#10003; Guardar partido eliminatorio</button>
+        <button class="btn btn-primary" onclick="guardarHorarioElim()" style="width:100%;margin-bottom:12px;">&#10003; Guardar partido</button>
         <div id="lista-horarios-elim" style="font-size:12px;color:var(--muted);"></div>
       </div>
     </div>
@@ -822,7 +796,7 @@ function verificarAutorizacion() {
 
 <div class="toast" id="toast"></div>
 
-<script src="./app2.js"></script>
+<script src="./app3.js"></script>
 
 <!-- MODAL: CARGUE MASIVO -->
 <div id="modal-cargue" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:16px;">

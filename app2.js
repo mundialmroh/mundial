@@ -957,6 +957,49 @@ async function cargarPartidosElim() {
   } catch(e) { console.warn('Error cargando partidos elim:', e.message); }
 }
 
+function renderGanadoresEspeciales() {
+  const container = document.getElementById('ganadores-especiales');
+  if (!container) return;
+  const especiales = [
+    { tipo: 'campeon',      icon: '🏆', label: 'Campeón',      campo: 'campeon' },
+    { tipo: 'subcampeon',   icon: '🥈', label: 'Subcampeón',   campo: 'subcampeon' },
+    { tipo: 'tercer_puesto',icon: '🥉', label: 'Tercer puesto',campo: 'tercerPuesto' },
+  ];
+  const hayResultados = especiales.some(e => resultados[e.tipo]?.equipo);
+  if (!hayResultados) { container.style.display = 'none'; return; }
+  container.style.display = 'block';
+  let html = '<div class="card" style="margin-bottom:14px;background:linear-gradient(135deg,#1f3c71 0%,#2d5299 100%);color:white;border:none;">';
+  html += '<div style="font-family:Bebas Neue,sans-serif;font-size:22px;letter-spacing:.04em;margin-bottom:14px;color:#c8972b;">🌟 Predicciones especiales</div>';
+  especiales.forEach(e => {
+    const res = resultados[e.tipo];
+    if (!res?.equipo) return;
+    const acertaron = apuestas.filter(a => {
+      if (a.tipo !== e.tipo) return false;
+      const val = a[e.campo] || a.equipoElegido || '';
+      return val.toLowerCase() === res.equipo.toLowerCase();
+    });
+    html += '<div style="margin-bottom:12px;padding:10px 14px;background:rgba(255,255,255,.1);border-radius:10px;">';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">';
+    html += '<span style="font-size:20px;">' + e.icon + '</span>';
+    html += '<span style="font-weight:700;font-size:14px;">' + e.label + ': <span style="color:#c8972b;">' + res.equipo + '</span></span>';
+    html += '<span style="margin-left:auto;font-size:12px;opacity:.8;">' + acertaron.length + ' acertaron</span>';
+    html += '</div>';
+    if (acertaron.length > 0) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
+      acertaron.forEach(a => {
+        const ini = a.nombre.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+        html += '<span style="background:rgba(200,151,43,.3);border:1px solid #c8972b;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;" title="' + a.nombre + '">' + ini + ' ' + a.nombre.split(' ')[0] + '</span>';
+      });
+      html += '</div>';
+    } else {
+      html += '<div style="font-size:12px;opacity:.6;">Nadie acertó</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 function renderApuestasPorPartido() {
   const container = document.getElementById('apuestas-por-partido');
   if (!container) return;
@@ -1223,6 +1266,7 @@ async function renderTabla() {
   const elCon = document.getElementById("st-con-apuesta-tabla");
   if (elCon) { const EXCL=new Set(['A1','A2','B1','D1','B2','C1','C2','D2','E1','F1','E2','F2','H1','G1','H2','G2','I1','I2','J1','J2','K1','L1','L2','K2']); elCon.textContent = new Set(apuestas.filter(a=>a.uid&&a.tipo==='grupo'&&!EXCL.has(a.partidoId)).map(a=>a.uid)).size; }
   renderApuestasPorPartido();
+  renderGanadoresEspeciales();
 
   const container = document.getElementById("tabla-ranking");
   container.innerHTML = '<div class="empty" style="padding:24px">Cargando...</div>';
